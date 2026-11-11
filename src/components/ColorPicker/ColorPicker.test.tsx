@@ -115,7 +115,9 @@ describe('gradients and shine', () => {
     await user.type(screen.getByLabelText('Color name (optional)'), 'Rainbow');
     expect(screen.getByRole('img', { name: 'Preview: Rainbow, gradient, shiny' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Save' }));
-    await screen.findByText('Rainbow');
+    // Wait for the grid: the form briefly shows the newly saved color, named, before leaving.
+    await screen.findByRole('heading', { name: 'Filament' });
+    expect(within((await screen.findByText('PLA · Silk')).closest('a')!).getByText('Rainbow')).toBeInTheDocument();
 
     const [spool] = await listSpoolsWithRemaining();
     expect(spool).toMatchObject({

@@ -88,7 +88,10 @@ describe('Add Filament', () => {
     await user.type(screen.getByLabelText('Color name (optional)'), 'Jade White');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByText('Jade White')).toBeInTheDocument();
+    // Wait for the grid: the form briefly shows the newly saved color, named, before leaving.
+    await screen.findByRole('heading', { name: 'Filament' });
+    const tile = (await screen.findByText('PLA · Matte')).closest('a')!;
+    expect(within(tile).getByText('Jade White')).toBeInTheDocument();
     const [spool] = await listSpoolsWithRemaining();
     expect(spool?.colorHex).toBe('#123456');
   });
