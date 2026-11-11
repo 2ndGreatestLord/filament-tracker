@@ -6,8 +6,11 @@ import { AddPrintFlow } from './screens/AddPrint/AddPrintFlow';
 import { StepGrams } from './screens/AddPrint/StepGrams';
 import { StepPhoto } from './screens/AddPrint/StepPhoto';
 import { StepSlots } from './screens/AddPrint/StepSlots';
+import { EditFilamentScreen } from './screens/EditFilament/EditFilamentScreen';
 import { FilamentScreen } from './screens/Filament/FilamentScreen';
+import { PrintDetailScreen } from './screens/PrintDetail/PrintDetailScreen';
 import { PrintsScreen } from './screens/Prints/PrintsScreen';
+import { SpoolDetailScreen } from './screens/SpoolDetail/SpoolDetailScreen';
 
 export function App() {
   return (
@@ -23,6 +26,9 @@ export function App() {
           <Route path="grams/:index" element={<StepGrams />} />
           <Route path="photo" element={<StepPhoto />} />
         </Route>
+        <Route path="/prints/:id" element={<PrintDetailScreen />} />
+        <Route path="/filament/:id" element={<SpoolDetailScreen />} />
+        <Route path="/filament/:id/edit" element={<EditFilamentScreen />} />
         <Route path="*" element={<Navigate to="/filament" replace />} />
       </Routes>
     </ToastProvider>

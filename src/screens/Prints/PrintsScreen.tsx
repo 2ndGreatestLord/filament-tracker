@@ -7,15 +7,8 @@ import { ScreenHeader } from '../../components/ScreenHeader/ScreenHeader';
 import { SettingsLink } from '../../components/SettingsLink/SettingsLink';
 import { usePrints } from '../../db/hooks';
 import type { PrintSummary } from '../../db/repository';
+import { formatDate } from '../../domain/date';
 import { formatGrams } from '../../domain/grams';
-
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 function PrintRow({ summary }: { summary: PrintSummary }) {
   const { print, filaments, totalGrams } = summary;

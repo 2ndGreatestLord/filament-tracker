@@ -8,10 +8,16 @@ interface PhotoPickerProps {
   photo?: Blob;
   onPhoto: (photo: Blob) => void | Promise<void>;
   emptyLabel?: string;
+  alt?: string;
 }
 
 /** A dashed photo frame. Tapping it opens the camera, with a link for the photo library. */
-export function PhotoPicker({ photo, onPhoto, emptyLabel = 'Tap to take a photo' }: PhotoPickerProps) {
+export function PhotoPicker({
+  photo,
+  onPhoto,
+  emptyLabel = 'Tap to take a photo',
+  alt = 'Selected print',
+}: PhotoPickerProps) {
   const toast = useToast();
   const url = useObjectUrl(photo);
   const [busy, setBusy] = useState(false);
@@ -43,7 +49,7 @@ export function PhotoPicker({ photo, onPhoto, emptyLabel = 'Tap to take a photo'
           onChange={(event) => void handleFile(event)}
         />
         {url ? (
-          <img src={url} alt="Selected print" className="h-full w-full object-cover" />
+          <img src={url} alt={alt} className="h-full w-full object-cover" />
         ) : (
           <>
             <CameraIcon className="h-10 w-10" />
