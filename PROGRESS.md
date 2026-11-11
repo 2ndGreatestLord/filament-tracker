@@ -1,35 +1,37 @@
 # Progress
 
-## Morning summary
+## Summary
 
-**M0 to M7 are built, tested, and pushed to `main`, but the live site shows a blank page until you rename the repo.**
+**The app is live at https://2ndgreatestlord.github.io/filament-tracker/** and serves the latest build. It loads in Edge and WebKit with no console errors, and every asset loads from under `/filament-tracker/`.
 
-### Do this first (about one minute)
+- Built: M0 to M7, plus feedback round 1 (below). All tests pass and the production build succeeds.
+- The repo was renamed to `filament-tracker`, which fixed the blank page caused by the case mismatch with Vite's `base`.
+- Still to check on a real phone: camera and photo library, Add to Home Screen, how flicking the spool feels, and photos surviving on iPhone (see "Could not verify").
 
-The repo is named `Filament-Tracker`, while the spec and Vite `base` use `/filament-tracker/`. GitHub Pages paths are case-sensitive, so the page loads at `/Filament-Tracker/` but its scripts and styles 404.
+## Morning review (spec vs. build)
 
-1. On GitHub, open the repo's **Settings → General**, and rename it to `filament-tracker`.
-2. Open **Actions → Deploy to GitHub Pages → Run workflow** on `main`, to redeploy.
-3. Open https://2ndgreatestlord.github.io/filament-tracker/ and check the app loads.
+DESIGN.md was compared line by line with the code. Gaps and differences, smallest first, with what was done:
 
-I didn't change `base` to match the repo, because it's a stated hard requirement, and I can't rename the repo from here. If you'd rather keep the capitalized name, change `BASE` in `vite.config.ts` to `/Filament-Tracker/`, and update the URL in `README.md`.
+1. A test title still said photos are saved "as a Blob", which is no longer true. Renamed. *Fixed.*
+2. Print Detail's Edit grams didn't warn when the new grams were more than the spool holds, unlike step 5. It now shows the same warning, and the spool still stops at 0 g. *Fixed, with a test.*
+3. The walkthrough "add 2 spools, log a 2-filament print, check both, edit, delete, grams come back" was covered only in pieces. A single UI test now runs it end to end, from the Add Filament form to the Filament tab. *Fixed.*
+4. Prompt 1's hard requirement says to store photos as a `Blob`. They're stored as raw bytes instead, because Safari can't keep Blobs in IndexedDB (feedback item 4). DESIGN.md's data model documents this. *Deliberate difference.*
+5. The spec says archiving hides a spool from pickers. It's also hidden from the home grid, with a "Show archived" toggle. *Deliberate, see Decisions.*
+6. The low-stock threshold lives in `localStorage`, not IndexedDB, and is included in backups. *Deliberate, see Decisions.*
+7. Step 7 says tapping the frame opens "the camera or photo library". `capture="environment"` goes straight to the camera on most phones, so there's also a "Choose from library" link. *Deliberate, see Decisions.*
+8. The "light haptic tick" can't happen on iPhone, because Safari has no vibration API. *Platform limit.*
+9. Lighthouse has no PWA category any more, so installability was checked with the browser's own check. *Tool limit.*
 
-### What's done
+Scenarios walked through in code and tests, all passing:
 
-- Filament tab, Add Filament, Add Print (name, 4 slots, picker, dial, photo), Prints tab, Print Detail, Spool Detail, Settings, backup and restore, offline PWA, light and dark themes, Undo toasts, README with install steps.
-- 171 unit and component tests pass, and the production build succeeds.
-- The production build also passed 25 checks in headless Edge at phone size. They covered real touch and mouse dial drags, real photo compression (4000×3000 down to 1280×960 JPEG Blob), reload while offline, the export, erase, and import round trip, the light theme, 44 px tap targets, no horizontal scrolling, no console errors, and no external requests.
-- Lighthouse scored 100 for accessibility and best practices on all five screens audited.
-
-### Please check on a real phone
-
-- Tapping the photo frame opens the camera, and "Choose from library" opens the photos.
-- Add to Home Screen works, and the app opens full screen with its icon.
-- The dial feels right under a finger, and Android gives a light tick while turning.
+- Two spools, a 2-filament print, edit, and delete: `src/screens/PrintDetail/PrintLifecycle.test.tsx`, plus transaction and rollback tests in `src/db/repository.test.ts`.
+- Using more grams than a spool has: warning and 0 g floor, in `AddPrintFlow.test.tsx`, `PrintDetailScreen.test.tsx`, and `repository.test.ts`.
+- Back mid-way through Add Print keeps everything, including after a reload: `AddPrintFlow.test.tsx`.
+- Export, erase, and import bring everything back, photos and saved colors included: `src/db/backup.test.ts` and `SettingsScreen.test.tsx`.
 
 ## Milestones
 
-- [x] M0: Scaffold and deploy pipeline. Build, tests, and workflow are done, and the Pages deploy succeeds. The page isn't usable at a URL until the repo rename above.
+- [x] M0: Scaffold and deploy pipeline. Build, tests, and workflow are done, and the Pages deploy succeeds. The live URL works since the repo rename.
 - [x] M1: Data layer. Schema, repository, domain math, and tests for remaining grams, low stock, and transactions.
 - [x] M2: Spool graphic and Filament tab. Reusable SVG, grid, empty state, low-stock styling, component tests.
 - [x] M3: Add Filament flow. Four selectors, optional details, validation, UI test through to the grid.
@@ -92,15 +94,13 @@ Checked in real browsers: headless Edge and Playwright WebKit both passed 14 che
 
 ## Known issues
 
-- **Repo name doesn't match `base`.** See the morning summary. The live site is blank until it's resolved.
 - A photo picked during Add Print is lost if the page is reloaded before saving. Everything else in the draft survives.
 - Lighthouse has no PWA category any more (removed in version 12). Installability was checked instead through the browser's own check, which reported no errors.
 
 ## Could not verify
 
-- The app loading from the real GitHub Pages URL, because of the repo name mismatch. The same build works under `/filament-tracker/` on a local server, and the Pages deploy itself succeeds.
 - Anything on a real phone: camera capture, the photo library, Add to Home Screen, and how the dial feels.
-- Safari and iOS behaviour in general. Browser checks ran in Chromium-based Edge only. Worth watching on iPhone: Export backup from the installed app, and safe-area spacing around the notch.
+- Safari on a real iPhone. Browser checks ran in Edge and in Playwright's WebKit on Windows, which is close to Safari but not the same. Worth watching on iPhone: Export backup from the installed app, and safe-area spacing around the notch.
 - How flicking feels on a real iPhone. The momentum constants are in `src/domain/momentum.ts` if it needs tuning.
 - The photo fix on a real iPhone. WebKit on Windows reproduced the failure and confirmed the fix, but it isn't iOS Safari itself.
 - Haptics. The code calls `navigator.vibrate`, which Android Chrome supports and iOS doesn't. A unit test confirms the call is made, but not that it feels right.

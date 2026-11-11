@@ -101,6 +101,22 @@ describe('Print Detail', () => {
     expect(await getSpoolRemaining(b.id)).toBe(450);
   });
 
+  it('warns when an edit uses more than the spool holds, and stops it at 0', async () => {
+    const { b, print } = await setupPrint();
+    const { user } = renderApp(`/prints/${print.id}`);
+    await user.click(await screen.findByRole('button', { name: 'Edit grams' }));
+    const input = screen.getByRole('spinbutton', { name: 'Grams of ABS · Silk, slot 2' });
+    await user.clear(input);
+    await user.type(input, '500');
+    expect(screen.queryByRole('alert')).toBeNull();
+    await user.type(input, '1');
+    expect(screen.getByRole('alert')).toHaveTextContent('more than this spool holds');
+    expect(screen.getByText('0 g left after this change')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save grams' }));
+    await screen.findByRole('button', { name: 'Edit grams' });
+    expect(await getSpoolRemaining(b.id)).toBe(0);
+  });
+
   it('leaves the spools alone when an edit is cancelled', async () => {
     const { a, print } = await setupPrint();
     const { user } = renderApp(`/prints/${print.id}`);

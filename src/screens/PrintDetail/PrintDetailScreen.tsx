@@ -132,6 +132,11 @@ export function PrintDetailScreen() {
                       <p className="text-center text-sm text-muted">
                         {formatGrams(remainingIfEdited(filament, edited))} left after this change
                       </p>
+                      {edited > remainingIfEdited(filament, 0) && (
+                        <p role="alert" className="text-center text-sm font-semibold text-warn">
+                          That’s more than this spool holds. It will be treated as reaching 0 g.
+                        </p>
+                      )}
                     </div>
                   )}
                 </li>

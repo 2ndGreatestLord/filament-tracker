@@ -209,7 +209,7 @@ describe('Add Print', () => {
     expect(summary?.print.photo).toBeUndefined();
   });
 
-  it('saves a photo, shrunk, as a Blob', async () => {
+  it('saves the shrunk photo with the print', async () => {
     await makeSpool();
     const { user } = renderApp('/prints/new');
     await reachPhotoStep(user);
