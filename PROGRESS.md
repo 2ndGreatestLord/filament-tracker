@@ -6,7 +6,7 @@
 - [x] M1: Data layer. Schema, repository, domain math, and tests for remaining grams, low stock, and transactions.
 - [x] M2: Spool graphic and Filament tab. Reusable SVG, grid, empty state, low-stock styling, component tests.
 - [x] M3: Add Filament flow. Four selectors, optional details, validation, UI test through to the grid.
-- [ ] M4: Add Print flow
+- [x] M4: Add Print flow. Name, slots, picker sheet, dial and input, photo step, save, and tests (2-filament print, dial math, Back keeps input).
 - [ ] M5: Prints tab and detail screens
 - [ ] M6: PWA and settings
 - [ ] M7: Polish and handoff

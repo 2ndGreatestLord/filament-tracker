@@ -8,6 +8,10 @@ import { afterEach } from 'vitest';
 // store values. Node's Blob can, and it behaves like the browser's real one.
 globalThis.Blob = NodeBlob as unknown as typeof Blob;
 
+// jsdom has no object URLs.
+URL.createObjectURL = () => 'blob:test';
+URL.revokeObjectURL = () => undefined;
+
 afterEach(() => {
   cleanup();
 });

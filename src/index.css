@@ -67,8 +67,7 @@ body {
 }
 
 button,
-a,
-[role='slider'] {
+a {
   touch-action: manipulation;
 }
 
