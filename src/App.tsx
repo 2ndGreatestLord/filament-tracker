@@ -1,8 +1,17 @@
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { TabLayout } from './components/TabLayout/TabLayout';
+import { ToastProvider } from './components/Toast/Toast';
+import { FilamentScreen } from './screens/Filament/FilamentScreen';
+
 export function App() {
   return (
-    <main className="mx-auto max-w-md p-6">
-      <h1 className="text-2xl font-semibold">Filament Tracker</h1>
-      <p className="mt-2 text-muted">Setting up. Your spools will live here.</p>
-    </main>
+    <ToastProvider>
+      <Routes>
+        <Route element={<TabLayout />}>
+          <Route path="/filament" element={<FilamentScreen />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/filament" replace />} />
+      </Routes>
+    </ToastProvider>
   );
 }
