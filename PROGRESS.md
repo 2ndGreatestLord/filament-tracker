@@ -8,7 +8,7 @@
 - [x] M3: Add Filament flow. Four selectors, optional details, validation, UI test through to the grid.
 - [x] M4: Add Print flow. Name, slots, picker sheet, dial and input, photo step, save, and tests (2-filament print, dial math, Back keeps input).
 - [x] M5: Prints tab and detail screens. History list, Print Detail (edit, delete, photo), Spool Detail (history, adjust, archive, delete rules), tests.
-- [ ] M6: PWA and settings
+- [x] M6: PWA and settings. Manifest, icons, offline service worker, threshold, export, import, erase, backup round-trip test.
 - [ ] M7: Polish and handoff
 
 ## Decisions

@@ -10,6 +10,7 @@ import { EditFilamentScreen } from './screens/EditFilament/EditFilamentScreen';
 import { FilamentScreen } from './screens/Filament/FilamentScreen';
 import { PrintDetailScreen } from './screens/PrintDetail/PrintDetailScreen';
 import { PrintsScreen } from './screens/Prints/PrintsScreen';
+import { SettingsScreen } from './screens/Settings/SettingsScreen';
 import { SpoolDetailScreen } from './screens/SpoolDetail/SpoolDetailScreen';
 
 export function App() {
@@ -29,6 +30,7 @@ export function App() {
         <Route path="/prints/:id" element={<PrintDetailScreen />} />
         <Route path="/filament/:id" element={<SpoolDetailScreen />} />
         <Route path="/filament/:id/edit" element={<EditFilamentScreen />} />
+        <Route path="/settings" element={<SettingsScreen />} />
         <Route path="*" element={<Navigate to="/filament" replace />} />
       </Routes>
     </ToastProvider>
