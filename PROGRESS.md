@@ -5,7 +5,7 @@
 - [x] M0: Scaffold and deploy pipeline. Build, tests, and workflow are done. "Placeholder live" depends on GitHub settings, see Known issues.
 - [x] M1: Data layer. Schema, repository, domain math, and tests for remaining grams, low stock, and transactions.
 - [x] M2: Spool graphic and Filament tab. Reusable SVG, grid, empty state, low-stock styling, component tests.
-- [ ] M3: Add Filament flow
+- [x] M3: Add Filament flow. Four selectors, optional details, validation, UI test through to the grid.
 - [ ] M4: Add Print flow
 - [ ] M5: Prints tab and detail screens
 - [ ] M6: PWA and settings
