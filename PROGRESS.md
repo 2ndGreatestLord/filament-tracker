@@ -1,26 +1,98 @@
 # Progress
 
+## Morning summary
+
+**M0 to M7 are built, tested, and pushed to `main`, but the live site shows a blank page until you rename the repo.**
+
+### Do this first (about one minute)
+
+The repo is named `Filament-Tracker`, while the spec and Vite `base` use `/filament-tracker/`. GitHub Pages paths are case-sensitive, so the page loads at `/Filament-Tracker/` but its scripts and styles 404.
+
+1. On GitHub, open the repo's **Settings → General**, and rename it to `filament-tracker`.
+2. Open **Actions → Deploy to GitHub Pages → Run workflow** on `main`, to redeploy.
+3. Open https://2ndgreatestlord.github.io/filament-tracker/ and check the app loads.
+
+I didn't change `base` to match the repo, because it's a stated hard requirement, and I can't rename the repo from here. If you'd rather keep the capitalized name, change `BASE` in `vite.config.ts` to `/Filament-Tracker/`, and update the URL in `README.md`.
+
+### What's done
+
+- Filament tab, Add Filament, Add Print (name, 4 slots, picker, dial, photo), Prints tab, Print Detail, Spool Detail, Settings, backup and restore, offline PWA, light and dark themes, Undo toasts, README with install steps.
+- 171 unit and component tests pass, and the production build succeeds.
+- The production build also passed 25 checks in headless Edge at phone size. They covered real touch and mouse dial drags, real photo compression (4000×3000 down to 1280×960 JPEG Blob), reload while offline, the export, erase, and import round trip, the light theme, 44 px tap targets, no horizontal scrolling, no console errors, and no external requests.
+- Lighthouse scored 100 for accessibility and best practices on all five screens audited.
+
+### Please check on a real phone
+
+- Tapping the photo frame opens the camera, and "Choose from library" opens the photos.
+- Add to Home Screen works, and the app opens full screen with its icon.
+- The dial feels right under a finger, and Android gives a light tick while turning.
+
 ## Milestones
 
-- [x] M0: Scaffold and deploy pipeline. Build, tests, and workflow are done. "Placeholder live" depends on GitHub settings, see Known issues.
+- [x] M0: Scaffold and deploy pipeline. Build, tests, and workflow are done, and the Pages deploy succeeds. The page isn't usable at a URL until the repo rename above.
 - [x] M1: Data layer. Schema, repository, domain math, and tests for remaining grams, low stock, and transactions.
 - [x] M2: Spool graphic and Filament tab. Reusable SVG, grid, empty state, low-stock styling, component tests.
 - [x] M3: Add Filament flow. Four selectors, optional details, validation, UI test through to the grid.
 - [x] M4: Add Print flow. Name, slots, picker sheet, dial and input, photo step, save, and tests (2-filament print, dial math, Back keeps input).
 - [x] M5: Prints tab and detail screens. History list, Print Detail (edit, delete, photo), Spool Detail (history, adjust, archive, delete rules), tests.
 - [x] M6: PWA and settings. Manifest, icons, offline service worker, threshold, export, import, erase, backup round-trip test.
-- [ ] M7: Polish and handoff
+- [x] M7: Polish and handoff. Accessibility pass, Undo toasts, themes, README, Lighthouse, final deploy.
 
 ## Decisions
 
+Tooling
+
 - TypeScript is pinned to 5.9 rather than the brand-new 7.0, to keep the toolchain conservative.
 - Tailwind v4 through `@tailwindcss/vite`, the current official setup.
+- The deploy workflow runs the tests before building, so a failing test blocks a deploy.
+
+Data
+
+- The low-stock threshold is stored in `localStorage` through `src/db/settings.ts`, because the spec defines exactly three IndexedDB tables. It's included in backups.
+- Import replaces all existing data, after a confirmation. It validates the whole file first and writes in one transaction, so a bad file can't damage anything.
+- Erase all data has no Undo. Typing ERASE is its safeguard. Undo covers deleting a spool or a print.
+- The app asks the browser for persistent storage at startup, to reduce the chance of the data being evicted.
+
+Spools
+
+- A "New" spool starts at its full size: 1,000 g, or the "full spool size" from More details if one is given.
+- The ring's full mark is the spool size if given, otherwise the larger of 1,000 g and the starting weight.
+- Material, finish, and color must be chosen. Only Amount has a default, as the spec says.
+- A preset color's name is saved as the color name unless another name is typed.
+- Set… can't exceed a typed full spool size.
+- Archived spools are hidden from the pickers and from the home grid, with a "Show archived" toggle under the grid so they can be reached and unarchived.
+- Deleting an unused spool happens immediately, with Undo. Only deleting a print asks first, as the spec says.
+
+Add Print
+
+- A spool can occupy only one slot in a print. It shows as "Already in a slot" in the picker.
+- Tapping a filled slot opens the picker to replace it. The × clears it.
+- Each step has its own route, so the phone's Back gesture moves through the steps. The draft lives in the flow's layout.
+- The draft is also kept in `sessionStorage` without the photo, because phones can discard the page while the camera is open. Leaving the flow clears it.
+- Grams may be 0, because the spec's minimum is 0.
+- `capture="environment"` opens the camera directly on most phones and skips the photo library, while the spec wants both. The dashed frame uses `capture` as required, and a separate "Choose from library" link uses a plain file input.
+- After a photo is picked, Skip and Save later are hidden, and "Remove photo" brings them back.
+
+Navigation
+
+- Settings is a gear icon at the top right of both tabs, since the tab bar has only the two main screens.
 
 ## Known issues
 
+- **Repo name doesn't match `base`.** See the morning summary. The live site is blank until it's resolved.
+- A photo picked during Add Print is lost if the page is reloaded before saving. Everything else in the draft survives.
+- Lighthouse has no PWA category any more (removed in version 12). Installability was checked instead through the browser's own check, which reported no errors.
+
 ## Could not verify
+
+- The app loading from the real GitHub Pages URL, because of the repo name mismatch. The same build works under `/filament-tracker/` on a local server, and the Pages deploy itself succeeds.
+- Anything on a real phone: camera capture, the photo library, Add to Home Screen, and how the dial feels.
+- Safari and iOS behaviour in general. Browser checks ran in Chromium-based Edge only. Worth watching on iPhone: Export backup from the installed app, and safe-area spacing around the notch.
+- Haptics. The code calls `navigator.vibrate`, which Android Chrome supports and iOS doesn't. A unit test confirms the call is made, but not that it feels right.
 
 ## Added dependencies (beyond DESIGN.md)
 
 - `jsdom` (dev): the DOM environment Vitest needs for component tests.
-- `@testing-library/user-event`, `@testing-library/jest-dom` (dev): part of the Testing Library family.
+- `@testing-library/user-event`, `@testing-library/jest-dom`, `@testing-library/dom` (dev): part of the Testing Library family.
+- `@resvg/resvg-js` (dev): renders the app icon SVG to PNGs, in `npm run icons`.
+- `@types/react`, `@types/react-dom`, `@types/node` (dev): type definitions.

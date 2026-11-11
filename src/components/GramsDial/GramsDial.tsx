@@ -118,7 +118,7 @@ export function GramsDial({ value, onChange, colorHex, fraction, label }: GramsD
       onKeyDown={handleKey}
       className="mx-auto aspect-square w-full max-w-72 cursor-grab touch-none rounded-full select-none"
     >
-      <SpoolGraphic colorHex={colorHex} fraction={fraction} className="h-full w-full">
+      <SpoolGraphic colorHex={colorHex} fraction={fraction} className="h-full w-full overflow-visible">
         <circle
           data-testid="dial-handle"
           cx={50 + HANDLE_RING_RADIUS * Math.sin(angle)}

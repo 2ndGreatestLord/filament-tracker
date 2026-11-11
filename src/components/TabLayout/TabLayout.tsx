@@ -9,7 +9,9 @@ const tabClass = ({ isActive }: { isActive: boolean }) =>
 export function TabLayout() {
   return (
     <div className="mx-auto min-h-dvh max-w-3xl pb-24">
-      <Outlet />
+      <main>
+        <Outlet />
+      </main>
       <nav
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]"

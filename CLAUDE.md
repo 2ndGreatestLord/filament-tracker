@@ -32,7 +32,7 @@ No backend, analytics, accounts, or external API calls. The app must work fully 
 - Remaining grams is **never stored**: `max(0, startGrams + adjustmentGrams - sum(usage))`, always computed.
 - Saving, editing, and deleting a print each happen in **one Dexie transaction**. Do not `await` non-Dexie promises inside a transaction (encode or decode blobs outside it).
 - Schema changes get a new Dexie `version(n)`, and `schemaVersion` in backups follows it.
-- Add Print uses one shared draft state in the flow's layout route, so Back never loses input.
+- Add Print uses one shared draft state in the flow's layout route, so Back never loses input. It is mirrored to `sessionStorage` (without the photo) so a page reload doesn't lose it either.
 - Vite `base` is `/filament-tracker/`, with `HashRouter` for routing.
 - Strict TypeScript. No `any` without a comment giving the reason.
 - Photos: compressed to at most 1280 px on the longest side, JPEG at about 0.8, stored as a `Blob`.

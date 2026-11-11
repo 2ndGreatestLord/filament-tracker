@@ -8,6 +8,7 @@ import {
   listSpoolsWithRemaining,
   setSpoolArchived,
 } from '../../db/repository';
+import { clearDraft, loadDraft, saveDraft } from '../../db/draftStorage';
 import { makeSpool } from '../../test/factories';
 import { renderApp } from '../../test/renderApp';
 
@@ -17,6 +18,7 @@ vi.mock('../../components/PhotoPicker/compressPhoto', () => ({
 
 beforeEach(async () => {
   await clearAllTables();
+  clearDraft();
 });
 
 async function pickSlot(user: UserEvent, slot: number, tileText: string) {
@@ -225,6 +227,27 @@ describe('Add Print', () => {
     const [summary] = await listPrintSummaries();
     expect(await summary?.print.photo?.text()).toBe('small');
     expect(summary?.print.photoPending).toBe(false);
+  });
+
+  it('restores the draft after the page is reloaded', async () => {
+    const spool = await makeSpool();
+    saveDraft({ name: 'Boat', spools: { 1: spool.id }, grams: { 1: 44 } });
+    renderApp('/prints/new/grams/0');
+    expect(await screen.findByRole('spinbutton', { name: 'Grams used' })).toHaveValue(44);
+  });
+
+  it('forgets the draft after leaving the flow', async () => {
+    await makeSpool();
+    const { user, unmount } = renderApp('/prints/new');
+    await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Boat');
+    expect(loadDraft()?.name).toBe('Boat');
+    unmount();
+    expect(loadDraft()).toBeNull();
+  });
+
+  it('never puts the photo in text storage', () => {
+    saveDraft({ name: 'A', spools: {}, grams: {}, photo: new Blob(['x']) });
+    expect(loadDraft()).toEqual({ name: 'A', spools: {}, grams: {} });
   });
 
   it('restarts the flow if the draft is gone after a reload', async () => {

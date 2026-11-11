@@ -1,5 +1,7 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { CloseIcon } from '../Icons/Icons';
+
+const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled), [tabindex="0"]';
 
 interface BottomSheetProps {
   title: string;
@@ -12,9 +14,34 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     panel.current?.focus();
-    return () => previous?.focus?.();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previous?.focus?.();
+    };
   }, []);
+
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      onClose();
+      return;
+    }
+    if (event.key !== 'Tab' || !panel.current) return;
+    const focusable = panel.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || active === panel.current)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center">
@@ -25,9 +52,7 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') onClose();
-        }}
+        onKeyDown={handleKey}
         className="relative max-h-[88dvh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-bg pb-[env(safe-area-inset-bottom)] outline-none"
       >
         <div className="sticky top-0 z-10 flex min-h-14 items-center bg-bg px-4">
