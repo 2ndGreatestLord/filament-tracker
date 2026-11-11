@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   addPrint,
@@ -44,6 +44,24 @@ describe('Prints tab', () => {
     expect(links[1]).toHaveTextContent('150 g');
     expect(within(links[1]!).getByRole('img', { name: 'Red PLA' })).toBeInTheDocument();
     expect(within(links[1]!).getAllByRole('img')).toHaveLength(2);
+  });
+
+  it('shows the placeholder, never a broken image, when a photo can’t load', async () => {
+    const spool = await makeSpool();
+    await addPrint({
+      name: 'Benchy',
+      photo: new Blob(['jpeg'], { type: 'image/jpeg' }),
+      filaments: [{ spoolId: spool.id, slot: 1, grams: 1 }],
+    });
+    const { container } = renderApp('/prints');
+    await screen.findByText('Benchy');
+    const image = await waitFor(() => {
+      const found = container.querySelector('main img');
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    fireEvent.error(image);
+    await waitFor(() => expect(container.querySelector('main img')).toBeNull());
   });
 
   it('has a friendly empty state', async () => {

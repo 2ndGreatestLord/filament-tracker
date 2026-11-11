@@ -3,6 +3,7 @@ import {
   EMPTY_FILAMENT_FORM,
   filamentFieldsToForm,
   filamentFormToFields,
+  resolvedCombo,
   validateFilamentForm,
   type FilamentFormValues,
 } from './filamentForm';
@@ -86,6 +87,49 @@ describe('filamentFormToFields', () => {
     expect(filamentFormToFields(valid).colorName).toBe('Red');
     expect(filamentFormToFields({ ...valid, colorName: 'Jade' }).colorName).toBe('Jade');
     expect(filamentFormToFields({ ...valid, colorHex: '#123456' }).colorName).toBeUndefined();
+  });
+});
+
+describe('gradients and shiny colors', () => {
+  it('saves a gradient as all of its stops, first color first', () => {
+    expect(
+      filamentFormToFields({ ...valid, colorHex: '#ff0000', gradient: ['#ffd700', '#0000ff'] }),
+    ).toMatchObject({ colorHex: '#ff0000', colorStops: ['#ff0000', '#ffd700', '#0000ff'] });
+  });
+
+  it('saves no stops for a single color', () => {
+    expect(filamentFormToFields(valid).colorStops).toBeUndefined();
+  });
+
+  it('saves shiny only when chosen', () => {
+    expect(filamentFormToFields({ ...valid, shiny: true }).shiny).toBe(true);
+    expect(filamentFormToFields(valid).shiny).toBeUndefined();
+  });
+
+  it('doesn’t name a gradient after its first preset color', () => {
+    expect(filamentFormToFields({ ...valid, gradient: ['#0000ff'] }).colorName).toBeUndefined();
+  });
+
+  it('round-trips a shiny gradient', () => {
+    const fields = filamentFormToFields({
+      ...valid,
+      gradient: ['#0000ff'],
+      shiny: true,
+      colorName: 'Sunset',
+    });
+    expect(filamentFormToFields(filamentFieldsToForm(fields))).toEqual(fields);
+  });
+});
+
+describe('resolvedCombo', () => {
+  it('uses typed text for Other, trimmed', () => {
+    expect(
+      resolvedCombo({ ...valid, material: 'Other', materialOther: ' PC ', finish: 'Silk' }),
+    ).toEqual({ material: 'PC', finish: 'Silk' });
+  });
+
+  it('is empty until chosen', () => {
+    expect(resolvedCombo(EMPTY_FILAMENT_FORM)).toEqual({ material: '', finish: '' });
   });
 });
 

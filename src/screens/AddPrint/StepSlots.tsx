@@ -82,7 +82,7 @@ export function StepSlots() {
                     {spool ? (
                       <>
                         <SpoolGraphic
-                          colorHex={spool.colorHex}
+                          paint={spool}
                           fraction={fractionRemaining(spool.remaining, spoolCapacity(spool))}
                           className="h-20 w-20"
                         />

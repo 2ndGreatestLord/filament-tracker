@@ -21,6 +21,7 @@ export function PhotoPicker({
   const toast = useToast();
   const url = useObjectUrl(photo);
   const [busy, setBusy] = useState(false);
+  const [failedUrl, setFailedUrl] = useState<string>();
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.target;
@@ -48,12 +49,19 @@ export function PhotoPicker({
           className="sr-only"
           onChange={(event) => void handleFile(event)}
         />
-        {url ? (
-          <img src={url} alt={alt} className="h-full w-full object-cover" />
+        {url && url !== failedUrl ? (
+          <img
+            src={url}
+            alt={alt}
+            onError={() => setFailedUrl(url)}
+            className="h-full w-full object-cover"
+          />
         ) : (
           <>
             <CameraIcon className="h-10 w-10" />
-            <span>{busy ? 'Processing…' : emptyLabel}</span>
+            <span>
+              {busy ? 'Processing…' : url ? 'Photo couldn’t load. Tap to add it again' : emptyLabel}
+            </span>
           </>
         )}
       </label>

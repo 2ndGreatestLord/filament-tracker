@@ -1,18 +1,19 @@
 import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  COLORS,
   EMPTY_FILAMENT_FORM,
   FINISHES,
   filamentFormToFields,
   MATERIALS,
   newSpoolGrams,
   OTHER,
+  resolvedCombo,
   validateFilamentForm,
   type FilamentFields,
   type FilamentFormErrors,
   type FilamentFormValues,
 } from '../../domain/filamentForm';
 import { Button } from '../Button/Button';
+import { ColorPicker } from '../ColorPicker/ColorPicker';
 
 export const INPUT_CLASS =
   'min-h-12 w-full rounded-xl border border-line bg-surface px-3 text-base text-ink';
@@ -81,7 +82,6 @@ export function FilamentForm({ initial, submitLabel = 'Save', onSubmit }: Filame
   const set = <K extends keyof FilamentFormValues>(key: K, value: FilamentFormValues[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
 
-  const isPreset = COLORS.some((color) => color.hex === values.colorHex);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -136,54 +136,12 @@ export function FilamentForm({ initial, submitLabel = 'Save', onSubmit }: Filame
       </Section>
 
       <Section title="Color" error={errors.color}>
-        <div className="flex flex-wrap gap-2">
-          {COLORS.map((color) => (
-            <label
-              key={color.hex}
-              title={color.name}
-              className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-line has-checked:border-accent has-checked:outline-2 has-checked:outline-accent has-focus-visible:outline-2 has-focus-visible:outline-accent"
-              style={{ backgroundColor: color.hex }}
-            >
-              <input
-                type="radio"
-                name={`${id}-color`}
-                aria-label={color.name}
-                checked={values.colorHex === color.hex}
-                onChange={() => set('colorHex', color.hex)}
-                className="sr-only"
-              />
-              {values.colorHex === color.hex && (
-                <span
-                  aria-hidden="true"
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-black font-bold text-white"
-                >
-                  ✓
-                </span>
-              )}
-            </label>
-          ))}
-        </div>
-        <div className="mt-3 flex items-center gap-3">
-          <label className="flex min-h-11 items-center gap-2">
-            <input
-              type="color"
-              aria-label="Custom color"
-              value={values.colorHex || '#888888'}
-              onChange={(event) => set('colorHex', event.target.value)}
-              className="h-11 w-11 cursor-pointer rounded-lg border border-line bg-transparent"
-            />
-            <span className="whitespace-nowrap text-sm">
-              Custom{values.colorHex && !isPreset ? ' ✓' : ''}
-            </span>
-          </label>
-          <input
-            aria-label="Color name (optional)"
-            placeholder="Color name (optional)"
-            className={INPUT_CLASS}
-            value={values.colorName}
-            onChange={(event) => set('colorName', event.target.value)}
-          />
-        </div>
+        <ColorPicker
+          value={values}
+          onChange={(patch) => setValues((current) => ({ ...current, ...patch }))}
+          {...resolvedCombo(values)}
+          inputClass={INPUT_CLASS}
+        />
       </Section>
 
       <Section title="Amount" error={errors.amount}>

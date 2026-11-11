@@ -36,7 +36,7 @@ export function SpoolTile({ spool, threshold, to, onPick, disabled }: SpoolTileP
   const content = (
     <>
       <SpoolGraphic
-        colorHex={spool.colorHex}
+        paint={spool}
         fraction={fractionRemaining(spool.remaining, spoolCapacity(spool))}
         className="h-24 w-24"
       />

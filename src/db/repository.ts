@@ -1,6 +1,7 @@
 import { adjustmentForMeasured, computeRemaining, sumGrams } from '../domain/grams';
-import type { Print, PrintFilament, Slot, Spool } from '../domain/types';
-import { db } from './schema';
+import { findSavedColor, savedColorFor } from '../domain/palette';
+import type { Print, PrintFilament, SavedColor, Slot, Spool } from '../domain/types';
+import { db, type StoredPrint } from './schema';
 
 export type NewSpool = Omit<
   Spool,
@@ -44,8 +45,9 @@ export interface PrintSummary {
   totalGrams: number;
 }
 
+/** Everything needed to undo a print delete, exactly as it was stored. */
 export interface PrintSnapshot {
-  print: Print;
+  print: StoredPrint;
   filaments: PrintFilament[];
 }
 
@@ -81,6 +83,56 @@ async function usagesForSpool(spoolId: string): Promise<number[]> {
   return rows.map((row) => row.grams);
 }
 
+// Photos
+
+/** Reads a photo's bytes. Done before a transaction starts, since it isn't a database call. */
+async function photoFields(photo: Blob): Promise<Pick<StoredPrint, 'photoData' | 'photoType'>> {
+  return { photoData: await photo.arrayBuffer(), photoType: photo.type || 'image/jpeg' };
+}
+
+/** Turns a stored print back into one with a Blob photo. */
+export function fromStored(row: StoredPrint): Print {
+  const { photoData, photoType, photo: legacy, ...print } = row;
+  if (photoData) return { ...print, photo: new Blob([photoData], { type: photoType ?? 'image/jpeg' }) };
+  if (legacy instanceof Blob) return { ...print, photo: legacy };
+  return print;
+}
+
+// Saved colors
+
+/** Remembers a spool's look in its material and finish palette. Call inside a transaction. */
+async function rememberColor(spool: Spool): Promise<void> {
+  const palette = await db.colors
+    .where('[material+finish]')
+    .equals([spool.material, spool.finish])
+    .toArray();
+  const match = findSavedColor(palette, spool);
+  if (!match) {
+    await db.colors.add(savedColorFor(spool, newId(), now()));
+  } else if (spool.colorName && match.name !== spool.colorName) {
+    await db.colors.put({ ...match, name: spool.colorName });
+  }
+}
+
+/** The colors saved for one material and finish, oldest first. */
+export async function listSavedColors(material: string, finish: string): Promise<SavedColor[]> {
+  const colors = await db.colors.where('[material+finish]').equals([material, finish]).toArray();
+  return colors.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function deleteSavedColor(id: string): Promise<SavedColor> {
+  return db.transaction('rw', db.colors, async () => {
+    const color = await db.colors.get(id);
+    if (!color) throw new NotFoundError('Color');
+    await db.colors.delete(id);
+    return color;
+  });
+}
+
+export async function restoreSavedColor(color: SavedColor): Promise<void> {
+  await db.colors.put(color);
+}
+
 // Spools
 
 export async function addSpool(input: NewSpool): Promise<Spool> {
@@ -93,15 +145,20 @@ export async function addSpool(input: NewSpool): Promise<Spool> {
     createdAt: timestamp,
     updatedAt: timestamp,
   };
-  await db.spools.add(spool);
+  await db.transaction('rw', db.spools, db.colors, async () => {
+    await db.spools.add(spool);
+    await rememberColor(spool);
+  });
   return spool;
 }
 
 export async function updateSpool(id: string, changes: Partial<NewSpool>): Promise<void> {
-  await db.transaction('rw', db.spools, async () => {
+  await db.transaction('rw', db.spools, db.colors, async () => {
     const spool = await db.spools.get(id);
     if (!spool) throw new NotFoundError('Spool');
-    await db.spools.put({ ...spool, ...changes, updatedAt: now() });
+    const updated = { ...spool, ...changes, updatedAt: now() };
+    await db.spools.put(updated);
+    await rememberColor(updated);
   });
 }
 
@@ -141,7 +198,7 @@ export async function getSpoolDetail(id: string): Promise<SpoolDetail | null> {
     const history = rows
       .flatMap((row, index) => {
         const print = prints[index];
-        return print ? [{ print, grams: row.grams }] : [];
+        return print ? [{ print: fromStored(print), grams: row.grams }] : [];
       })
       .sort((a, b) => b.print.createdAt.localeCompare(a.print.createdAt));
     return {
@@ -207,17 +264,17 @@ function assertValidNewPrint(input: NewPrint): void {
 export async function addPrint(input: NewPrint): Promise<Print> {
   assertValidNewPrint(input);
   const timestamp = now();
-  const print: Print = {
+  const stored: StoredPrint = {
     id: newId(),
     name: input.name.trim(),
     photoPending: input.photoPending ?? false,
     createdAt: timestamp,
     updatedAt: timestamp,
-    ...(input.photo ? { photo: input.photo } : {}),
+    ...(input.photo ? await photoFields(input.photo) : {}),
   };
   const rows: PrintFilament[] = input.filaments.map((filament) => ({
     id: newId(),
-    printId: print.id,
+    printId: stored.id,
     spoolId: filament.spoolId,
     slot: filament.slot,
     grams: filament.grams,
@@ -226,10 +283,10 @@ export async function addPrint(input: NewPrint): Promise<Print> {
   await db.transaction('rw', db.spools, db.prints, db.printFilaments, async () => {
     const spools = await db.spools.bulkGet(rows.map((row) => row.spoolId));
     if (spools.some((spool) => !spool)) throw new NotFoundError('Spool');
-    await db.prints.add(print);
+    await db.prints.add(stored);
     await db.printFilaments.bulkAdd(rows);
   });
-  return print;
+  return fromStored(stored);
 }
 
 /** Changes the grams on a print's filament rows, keyed by row id, in one transaction. */
@@ -249,10 +306,12 @@ export async function updatePrintGrams(
 }
 
 export async function setPrintPhoto(printId: string, photo: Blob): Promise<void> {
+  const fields = await photoFields(photo);
   await db.transaction('rw', db.prints, async () => {
     const print = await db.prints.get(printId);
     if (!print) throw new NotFoundError('Print');
-    await db.prints.put({ ...print, photo, photoPending: false, updatedAt: now() });
+    const { photo: _legacy, ...rest } = print;
+    await db.prints.put({ ...rest, ...fields, photoPending: false, updatedAt: now() });
   });
 }
 
@@ -305,7 +364,7 @@ export async function listPrintSummaries(): Promise<PrintSummary[]> {
       db.printFilaments.toArray(),
       db.spools.toArray(),
     ]);
-    return prints.map((print) => summarize(print, rows, spools));
+    return prints.map((print) => summarize(fromStored(print), rows, spools));
   });
 }
 
@@ -317,13 +376,18 @@ export async function getPrintSummary(id: string): Promise<PrintSummary | null> 
       db.printFilaments.toArray(),
       db.spools.toArray(),
     ]);
-    return summarize(print, rows, spools);
+    return summarize(fromStored(print), rows, spools);
   });
 }
 
-/** Removes every spool, print, and filament row in one transaction. */
+/** Removes every spool, print, filament row, and saved color in one transaction. */
 export async function clearAllTables(): Promise<void> {
-  await db.transaction('rw', db.spools, db.prints, db.printFilaments, async () => {
-    await Promise.all([db.spools.clear(), db.prints.clear(), db.printFilaments.clear()]);
+  await db.transaction('rw', [db.spools, db.prints, db.printFilaments, db.colors], async () => {
+    await Promise.all([
+      db.spools.clear(),
+      db.prints.clear(),
+      db.printFilaments.clear(),
+      db.colors.clear(),
+    ]);
   });
 }

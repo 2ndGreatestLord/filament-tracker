@@ -106,7 +106,7 @@ export function PrintDetailScreen() {
                 <li key={filament.id} className="rounded-2xl bg-surface p-3">
                   <Link to={`/filament/${spool.id}`} className="flex items-center gap-3">
                     <SpoolGraphic
-                      colorHex={spool.colorHex}
+                      paint={spool}
                       fraction={fractionRemaining(spool.remaining, spoolCapacity(spool))}
                       className="h-12 w-12"
                     />

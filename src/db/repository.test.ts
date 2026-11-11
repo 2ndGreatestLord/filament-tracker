@@ -5,6 +5,9 @@ import {
   adjustSpoolRemaining,
   clearAllTables,
   deletePrint,
+  deleteSavedColor,
+  listSavedColors,
+  restoreSavedColor,
   deleteSpool,
   getPrintSummary,
   getSpool,
@@ -103,6 +106,28 @@ describe('spools', () => {
     await addPrint({ name: 'New', filaments: [{ spoolId: spool.id, slot: 1, grams: 2 }] });
     const detail = await getSpoolDetail(spool.id);
     expect(detail?.history.map((h) => h.print.name)).toEqual(['New', 'Old']);
+  });
+});
+
+describe('saved colors', () => {
+  it('can be deleted and restored', async () => {
+    await makeSpool({ material: 'PLA', finish: 'Silk', colorName: 'Gold' });
+    const [gold] = await listSavedColors('PLA', 'Silk');
+    const deleted = await deleteSavedColor(gold!.id);
+    expect(await listSavedColors('PLA', 'Silk')).toHaveLength(0);
+    await restoreSavedColor(deleted);
+    expect(await listSavedColors('PLA', 'Silk')).toEqual([gold]);
+  });
+
+  it('remembers a new look when a spool is edited, and renames a matching one', async () => {
+    const spool = await makeSpool({ material: 'PLA', finish: 'Silk', colorName: 'Gold' });
+    await updateSpool(spool.id, { colorName: 'Old Gold' });
+    await updateSpool(spool.id, { shiny: true });
+    const names = (await listSavedColors('PLA', 'Silk')).map((c) => [c.name, c.shiny ?? false]);
+    expect(names).toEqual([
+      ['Old Gold', false],
+      ['Old Gold', true],
+    ]);
   });
 });
 
@@ -238,6 +263,34 @@ describe('prints', () => {
     expect(list.map((p) => p.print.name)).toEqual(['New', 'Old']);
     expect(list[0]?.totalGrams).toBe(5.5);
     expect(list[0]?.filaments.map((f) => f.slot)).toEqual([1, 3]);
+  });
+
+  it('stores photos as raw bytes, not as a Blob, which Safari can lose', async () => {
+    const spool = await makeSpool();
+    const print = await addPrint({
+      name: 'Boat',
+      photo: new Blob(['jpeg'], { type: 'image/jpeg' }),
+      filaments: [{ spoolId: spool.id, slot: 1, grams: 1 }],
+    });
+    const stored = await db.prints.get(print.id);
+    expect(stored?.photo).toBeUndefined();
+    // Checked by tag: the test environment has more than one ArrayBuffer constructor.
+    expect(Object.prototype.toString.call(stored?.photoData)).toBe('[object ArrayBuffer]');
+    expect(stored?.photoType).toBe('image/jpeg');
+    const summary = await getPrintSummary(print.id);
+    expect(summary?.print.photo).toBeInstanceOf(Blob);
+    expect(await summary?.print.photo?.text()).toBe('jpeg');
+  });
+
+  it('restores a deleted print with its photo', async () => {
+    const spool = await makeSpool();
+    const print = await addPrint({
+      name: 'Boat',
+      photo: new Blob(['jpeg'], { type: 'image/jpeg' }),
+      filaments: [{ spoolId: spool.id, slot: 1, grams: 1 }],
+    });
+    await restorePrint(await deletePrint(print.id));
+    expect(await (await getPrintSummary(print.id))?.print.photo?.text()).toBe('jpeg');
   });
 
   it('stores a photo and clears the pending badge', async () => {

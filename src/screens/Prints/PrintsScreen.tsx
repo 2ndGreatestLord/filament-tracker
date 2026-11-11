@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { buttonClass } from '../../components/Button/Button';
+import { ColorDot } from '../../components/ColorDot/ColorDot';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { CameraIcon, PlusIcon } from '../../components/Icons/Icons';
 import { useObjectUrl } from '../../components/PhotoPicker/useObjectUrl';
@@ -13,14 +15,21 @@ import { formatGrams } from '../../domain/grams';
 function PrintRow({ summary }: { summary: PrintSummary }) {
   const { print, filaments, totalGrams } = summary;
   const thumbnail = useObjectUrl(print.photo);
+  // Never show a broken-image icon. If a photo can't load, show the placeholder instead.
+  const [failedUrl, setFailedUrl] = useState<string>();
   return (
     <li>
       <Link
         to={`/prints/${print.id}`}
         className="flex items-center gap-3 rounded-2xl bg-surface p-2"
       >
-        {thumbnail ? (
-          <img src={thumbnail} alt="" className="h-16 w-16 rounded-xl object-cover" />
+        {thumbnail && thumbnail !== failedUrl ? (
+          <img
+            src={thumbnail}
+            alt=""
+            onError={() => setFailedUrl(thumbnail)}
+            className="h-16 w-16 rounded-xl object-cover"
+          />
         ) : (
           <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-surface-2 text-muted">
             <CameraIcon />
@@ -33,12 +42,10 @@ function PrintRow({ summary }: { summary: PrintSummary }) {
           </p>
           <div className="mt-1 flex items-center gap-1">
             {filaments.map((filament) => (
-              <span
+              <ColorDot
                 key={filament.id}
-                role="img"
-                aria-label={`${filament.spool.colorName ?? filament.spool.colorHex} ${filament.spool.material}`}
-                className="h-3.5 w-3.5 rounded-full border border-line"
-                style={{ backgroundColor: filament.spool.colorHex }}
+                paint={filament.spool}
+                label={`${filament.spool.colorName ?? filament.spool.colorHex} ${filament.spool.material}`}
               />
             ))}
             {print.photoPending && (

@@ -34,7 +34,7 @@ The app has two main screens, **Filament** and **Prints**, switched with a botto
 
 ### Home: Filament tab (the sketch's "Saved Filament")
 
-- A grid of spool tiles, 2 columns on phones and more on wider screens. Each tile shows a spool icon in the filament's color, a ring showing the fraction remaining, the remaining grams, and "PLA · Matte" style text.
+- A grid of spool tiles, 2 columns on phones and more on wider screens. Each tile shows the spool graphic, with the filament showing through its holes in proportion to what's left, the remaining grams, and "PLA · Matte" style text.
 - A tile turns amber below the low-stock threshold (default 100 g) and red at 0 g.
 - The last tile is a **+** that starts Add Filament.
 - Tapping a tile opens Spool Detail.
@@ -44,7 +44,10 @@ The app has two main screens, **Filament** and **Prints**, switched with a botto
 - A **+ Add Filament** button opens a form with four selectors in the sketch's order:
   1. **Material:** PLA, PETG, ABS, ASA, TPU, Nylon, Other (Other shows a text box).
   2. **Finish:** Basic, Matte, Silk, Multicolor, Wood, Glow, Carbon Fiber, Other.
-  3. **Color:** a row of tappable color dots (about 16 common colors), plus a custom color picker and an optional color name such as "Jade White."
+  3. **Color**, in three parts:
+     - **Your colors for this material and finish.** Every material and finish combination keeps its own saved colors, so PLA · Basic, PLA · Matte, and PETG · Basic each have their own list. A color is saved there automatically the first time a spool is saved with it, and the app keeps all of them. One tap reuses a saved color, including its gradient, shine, and name. An Edit button removes saved colors, with Undo. Until a material and finish are chosen, this part says to choose them first.
+     - **Basic colors:** a row of about 16 tappable color dots.
+     - **Custom, gradient, or shiny:** a custom color picker, "+ Gradient color" to add up to 3 more colors (4 in total) that blend across the spool, each removable, and a **Shiny** toggle that adds a sheen. Shine works on a single color or a gradient. A small spool preview shows the result, next to an optional color name such as "Jade White."
   4. **Amount:** "New (1,000 g)" is selected by default. "Set…" shows a grams input for a partly used spool.
 - An optional "More details" section, collapsed by default, holds brand, price paid, and a full spool size other than 1,000 g.
 - Save adds the spool to the grid with a brief confirmation.
@@ -52,44 +55,50 @@ The app has two main screens, **Filament** and **Prints**, switched with a botto
 ### Add Print (steps 3–7)
 
 - **Step 3–4, Name and slots:** a Name field and **4 filament slots** shown as + boxes. Tapping a slot opens a bottom sheet with the saved-filament grid, including a + to add a new spool without leaving the flow. A filled slot shows that spool's color and label and can be cleared. **Next** is enabled once there's a name and at least one slot.
-- **Step 5, Grams per filament:** one screen per filled slot, titled "Filament 1 of N." The center is a large spool graphic in that filament's color. Dragging a finger in a circle around it acts as a **dial**: clockwise adds grams, counterclockwise subtracts, at 1 g steps with a light haptic tick where supported. Under it, a pill-shaped grams input stays in sync with the dial so typing works too, with −10 and +10 buttons. A preview line reads "412 g left → 377 g after this print." If he enters more grams than the spool holds, show a warning but allow it, and treat the spool as reaching 0 g.
+- **Step 5, Grams per filament:** one screen per filled slot, titled "Filament 1 of N." The center is a large spool graphic in that filament's color, which works like a wheel you spin, with no dial ring or handle. Dragging a finger around it turns the spool with the finger: clockwise adds grams, counterclockwise subtracts, one full turn = 100 g, at 1 g steps with a light haptic tick where supported. Like iOS scrolling, a **flick** keeps the spool spinning after the finger lifts, slowing smoothly to a stop. Flicking again in the same direction while it's still spinning adds to its speed, so repeated flicks go faster, up to a cap: one hard flick coasts at most about 135 g, so a few flicks can't race through a whole spool. Touching the spool while it spins stops it, and typing or the ±10 buttons also stop it. The spool never goes below 0 g. Under it, a pill-shaped grams input stays in sync with the dial so typing works too, with −10 and +10 buttons. A preview line reads "412 g left → 377 g after this print." If he enters more grams than the spool holds, show a warning but allow it, and treat the spool as reaching 0 g.
 - **Step 6:** repeat step 5 for each filled slot, with Back available.
 - **Step 7, Photo:** a dashed photo frame. Tapping it opens the phone camera or photo library. Then Save, **Skip** (no photo), or **Save later** (saves the print with a "photo needed" badge so a photo can be added from Print Detail). Photos are shrunk to about 1280 px before they're stored.
 - Saving subtracts the grams from each spool and returns to the Prints tab with the new print on top.
 
 ### Home: Prints tab
 
-A list of prints, newest first. Each row shows a photo thumbnail or placeholder, the name, the date, total grams, and a colored dot for each filament used. Tapping a row opens Print Detail.
+A list of prints, newest first. Each row shows a photo thumbnail or placeholder (never a broken image), the name, the date, total grams, and a colored dot for each filament used. Tapping a row opens Print Detail.
 
 ### Detail and settings screens
 
-- **Spool Detail:** a large ring with grams remaining and used, the spool's attributes, its usage history (prints that used it), Edit, "Adjust remaining" (for correcting after weighing the spool), Archive (hides it from pickers), and Delete. Delete is blocked while prints reference the spool; archive is offered instead.
+- **Spool Detail:** a large spool graphic with grams remaining and used, the spool's attributes, its usage history (prints that used it), Edit, "Adjust remaining" (for correcting after weighing the spool), Archive (hides it from pickers), and Delete. Delete is blocked while prints reference the spool; archive is offered instead.
 - **Print Detail:** the photo, the filaments and grams used, Edit grams (re-calculates the spools), Add/Replace photo, and Delete (asks first, then gives the grams back to the spools).
 - **Settings:** low-stock threshold, Export backup (downloads JSON with photos included), Import backup, and Erase all data (requires typing ERASE).
 
 ## Data model
 
-There are three tables in IndexedDB. **Remaining grams is never stored.** It's always calculated from the spool's starting weight minus its usage, so editing or deleting a print can't leave a spool's count out of step.
+There are four tables in IndexedDB. **Remaining grams is never stored.** It's always calculated from the spool's starting weight minus its usage, so editing or deleting a print can't leave a spool's count out of step.
 
 | Table | Field | Type | Notes |
 | --- | --- | --- | --- |
 | spools | id | string (UUID) | primary key |
 | spools | material | string | PLA, PETG, … or custom text |
 | spools | finish | string | Basic, Matte, … or custom text |
-| spools | colorHex / colorName | string / string? | hex drives every spool graphic |
+| spools | colorHex / colorName | string / string? | hex drives every spool graphic; the first gradient color when there's a gradient |
+| spools | colorStops | string[]? | 2–4 hex colors for a gradient, the first equal to colorHex; absent for a single color |
+| spools | shiny | boolean? | true adds a sheen |
 | spools | startGrams | number | 1000 for "New"; the typed value for "Set…" |
 | spools | adjustmentGrams | number | default 0; set by "Adjust remaining" after weighing |
 | spools | brand / price / spoolSizeGrams | string? / number? / number? | optional details |
 | spools | archived, createdAt, updatedAt | boolean, ISO dates |  |
 | prints | id | string (UUID) | primary key |
 | prints | name | string | required |
-| prints | photo | Blob? | compressed JPEG |
+| prints | photoData / photoType | ArrayBuffer? / string? | the compressed JPEG's bytes and MIME type (see below) |
 | prints | photoPending | boolean | true after "Save later" |
 | prints | createdAt, updatedAt | ISO dates |  |
 | printFilaments | id | string (UUID) | primary key |
 | printFilaments | printId / spoolId | string / string | indexed |
 | printFilaments | slot | 1–4 | order shown in the flow |
 | printFilaments | grams | number | at least 0; decimals allowed |
+| colors | id | string (UUID) | primary key |
+| colors | material / finish | string / string | compound index `[material+finish]`; one saved list per combination |
+| colors | colorHex / colorStops / shiny / name | as on spools | the saved look |
+| colors | createdAt | ISO date | list order |
 
 The calculation:
 
@@ -98,6 +107,9 @@ The calculation:
 ```
 
 The database schema is versioned with Dexie `version(n)` so later releases can migrate saved data without losing anything. The backup JSON carries a `schemaVersion`, and photos are encoded as base64 strings.
+
+- **Schema version 2** added the `colors` table. Upgrading from version 1 fills each material and finish's saved colors from the existing spools. Backups now include the saved colors. Backups from version 1 still import, and their saved colors are rebuilt from their spools the same way.
+- **Photos are stored as raw bytes, not as a `Blob`.** Safari and iOS can fail to store a `Blob` in IndexedDB, or lose its data later, which showed up as a print's photo turning into a broken image after doing something else. The app rebuilds a `Blob` from the bytes when it reads a print. At startup, any photo still saved as a `Blob` is converted, and a photo that can no longer be read marks its print "Photo needed" instead of showing as broken.
 
 ## Tech stack and architecture
 
@@ -108,7 +120,7 @@ The stack below is chosen so Claude Code can build, test, and deploy it without 
 | Language / UI | TypeScript + React 18 | Large, stable ecosystem, and Claude Code is strongest here |
 | Build | Vite | Fast; static output fits GitHub Pages |
 | Styling | Tailwind CSS | Quick, consistent mobile layouts |
-| Storage | Dexie (IndexedDB) + dexie-react-hooks | Saves data and photo blobs on the device; screens update live |
+| Storage | Dexie (IndexedDB) + dexie-react-hooks | Saves data and photos on the device; screens update live |
 | Routing | React Router with **HashRouter** | Avoids 404s on GitHub Pages when a page is refreshed |
 | Installable / offline | vite-plugin-pwa | Manifest, icons, and service worker for offline use |
 | Tests | Vitest + Testing Library + fake-indexeddb | Unit and component tests that run in the sandbox |
@@ -117,19 +129,19 @@ The stack below is chosen so Claude Code can build, test, and deploy it without 
 Architecture rules for Claude Code:
 
 - `src/db/`: the Dexie schema plus **all** data access through a small repository layer, such as `addPrint()` and `getSpoolRemaining()`. Components never call Dexie directly.
-- `src/domain/`: pure functions for remaining grams, low-stock state, and dial angle-to-grams math. These are the most heavily unit-tested code.
+- `src/domain/`: pure functions for remaining grams, low-stock state, dial angle-to-grams math, spin momentum, the reel's geometry, and colors (gradients, shine, saved palettes). These are the most heavily unit-tested code.
 - `src/screens/` and `src/components/`: one folder per screen. Add Print uses one shared draft state, so Back doesn't lose input.
 - Saving a print writes the print and its filament rows in **one Dexie transaction**.
 - Vite `base` must be `/filament-tracker/` so assets load on GitHub Pages.
 
 ## UI and visual design
 
-The app should feel like a clean, modern phone app, built around a dark theme. The spool graphic from the sketch, a black reel with colored dots, is its visual signature.
+The app should feel like a clean, modern phone app, built around a dark theme. The spool graphic, a dark Bambu Lab–style reel with the filament showing through its holes, is its visual signature.
 
 - **Phone first:** designed at 375–430 px width, usable one-handed. Main buttons sit in the bottom third of the screen and are at least 44 px tall.
 - **Theme:** dark by default with a light theme that follows the system setting. One accent color. The filament colors themselves supply the rest of the color.
-- **Spool graphic:** a single reusable SVG component in the style of the sketch's step 5, a black reel with filament-colored speckles and center. It takes the color hex and the fraction remaining, shown as a ring. The same component appears on tiles, in the picker, on the dial, and on detail screens.
-- **Dial:** follows the finger smoothly, tracks multiple full turns (one turn = 100 g), never goes below 0, and has a visible handle on the ring.
+- **Spool graphic:** a single reusable SVG component modeled on a Bambu Lab reel: a dark plate with a dense square grid of round holes (largest mid-way out, smaller toward the hub and rim), a solid hub ring, an open center hole, a pill-shaped label pad on the left, and small notches in the rim. The filament is a disc of its color behind the plate, so it shows **only through the holes**, never in the center hole. The disc's area is proportional to the fraction remaining, so a full spool fills every hole and an empty one shows none. Gradients run across the filament, and shiny filament gets a sheen. There's no separate progress ring. The component takes the color (with gradient and shine), the fraction remaining, and a rotation, and it appears on tiles, in the picker, on the grams screen, and on detail screens.
+- **Grams spool:** the spool itself rotates with the grams (one turn = 100 g) as it's dragged or coasting after a flick, tracks multiple full turns, never goes below 0, and has no handle or dial ring.
 - **Feedback:** short confirmation toasts, and Undo for 5 seconds after any delete.
 - **Empty states:** a friendly prompt such as "No filament yet, add your first spool" with the + button.
 - **Accessibility:** color is never the only signal (tiles also say "Low" in words), every color dot has a label, and the dial has a matching text input.

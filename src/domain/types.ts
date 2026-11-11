@@ -5,6 +5,9 @@ export interface Spool {
   material: string;
   finish: string;
   colorHex: string;
+  /** Gradient stops, the first equal to `colorHex`. Absent for a single color. */
+  colorStops?: string[];
+  shiny?: boolean;
   colorName?: string;
   startGrams: number;
   adjustmentGrams: number;
@@ -31,4 +34,16 @@ export interface PrintFilament {
   spoolId: string;
   slot: Slot;
   grams: number;
+}
+
+/** A color remembered for one material and finish, such as PLA · Matte. */
+export interface SavedColor {
+  id: string;
+  material: string;
+  finish: string;
+  name?: string;
+  colorHex: string;
+  colorStops?: string[];
+  shiny?: boolean;
+  createdAt: string;
 }

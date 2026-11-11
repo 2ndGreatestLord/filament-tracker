@@ -17,6 +17,7 @@ import {
 import { useLowStockThreshold } from '../../db/settings';
 import { formatDate } from '../../domain/date';
 import { formatGrams, fractionRemaining, spoolCapacity } from '../../domain/grams';
+import { paintDescription } from '../../domain/paint';
 import { getStockStatus, stockLabel } from '../../domain/stock';
 
 type Sheet = 'adjust' | 'blocked' | null;
@@ -89,7 +90,7 @@ export function SpoolDetailScreen() {
       <div className="flex flex-col gap-5 px-4 pt-2">
         <div className="flex flex-col items-center gap-1">
           <SpoolGraphic
-            colorHex={spool.colorHex}
+            paint={spool}
             fraction={fraction}
             title={`${spool.colorName ?? 'Filament'} spool, ${Math.round(fraction * 100)}% remaining`}
             className="h-56 w-56"
@@ -107,7 +108,7 @@ export function SpoolDetailScreen() {
         <dl className="divide-y divide-line rounded-2xl bg-surface px-3">
           <Attribute name="Material" value={spool.material} />
           <Attribute name="Finish" value={spool.finish} />
-          <Attribute name="Color" value={spool.colorName ?? spool.colorHex} />
+          <Attribute name="Color" value={paintDescription(spool, spool.colorName)} />
           <Attribute name="Brand" value={spool.brand} />
           <Attribute
             name="Price paid"

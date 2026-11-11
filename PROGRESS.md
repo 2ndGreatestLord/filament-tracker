@@ -48,7 +48,7 @@ Tooling
 
 Data
 
-- The low-stock threshold is stored in `localStorage` through `src/db/settings.ts`, because the spec defines exactly three IndexedDB tables. It's included in backups.
+- The low-stock threshold is stored in `localStorage` through `src/db/settings.ts`, because the original spec defined exactly three IndexedDB tables. It's included in backups.
 - Import replaces all existing data, after a confirmation. It validates the whole file first and writes in one transaction, so a bad file can't damage anything.
 - Erase all data has no Undo. Typing ERASE is its safeguard. Undo covers deleting a spool or a print.
 - The app asks the browser for persistent storage at startup, to reduce the chance of the data being evicted.
@@ -56,7 +56,7 @@ Data
 Spools
 
 - A "New" spool starts at its full size: 1,000 g, or the "full spool size" from More details if one is given.
-- The ring's full mark is the spool size if given, otherwise the larger of 1,000 g and the starting weight.
+- The full mark for the fraction shown on the spool is the spool size if given, otherwise the larger of 1,000 g and the starting weight.
 - Material, finish, and color must be chosen. Only Amount has a default, as the spec says.
 - A preset color's name is saved as the color name unless another name is typed.
 - Set… can't exceed a typed full spool size.
@@ -77,6 +77,19 @@ Navigation
 
 - Settings is a gear icon at the top right of both tabs, since the tab bar has only the two main screens.
 
+## Feedback round 1 (from testing)
+
+All six items from the first round of testing are done, tested, and in DESIGN.md.
+
+1. **Spool look.** The graphic now copies the Bambu Lab reel in the reference photo: a square grid of holes, solid hub ring, center hole, pill-shaped label pad, and rim notches. The plate stays dark, as the original spec's "black reel" said.
+2. **iOS-style flicking.** The grams screen is now a spool you spin, with no dial ring or handle. A flick coasts and slows with exponential friction (time constant 450 ms). Flicking again in the same direction adds to the current speed, capped at 0.3 g/ms, so one flick coasts at most about 135 g. Touching the spool stops it.
+3. **Spinning, and filament showing through the holes.** The reel rotates with the grams (one turn = 100 g). The filament is a disc behind the plate, so it shows only through the holes and never in the center hole. Its area is proportional to the amount left. The old outer progress ring is removed everywhere, since the filament now shows the amount left.
+4. **Photo breaking after doing something else.** Root cause: WebKit (Safari, and every browser on iPhone) can't reliably keep a `Blob` in IndexedDB. In WebKit testing, saving a print with a photo failed outright, and iOS is known to lose Blob data later. Photos are now stored as raw bytes (schema version 2), existing Blob photos are converted at startup, and an image that still fails to load shows the placeholder instead of a broken icon.
+5. **Colors per material and finish.** A new `colors` table keeps a saved list for each material and finish combination. Every new color is saved automatically when a spool is saved, and can be removed with Undo. Upgrading fills the lists from existing spools, and backups include them.
+6. **Gradients and shine.** A color can be a gradient of up to 4 colors, shiny, or both. Shine is a sheen that doesn't rotate with the spool, so it reads like light on the filament.
+
+Checked in real browsers: headless Edge and Playwright WebKit both passed 14 checks against the production build. The checks covered per-combination palettes, no handle, a slow drag landing on exactly 25 g with the reel turned 90°, flick coasting and stopping, a moderate flick distance, repeated flicks going further, and a photo surviving save, adding a filament, Print Detail, and reload, with no console errors.
+
 ## Known issues
 
 - **Repo name doesn't match `base`.** See the morning summary. The live site is blank until it's resolved.
@@ -88,6 +101,8 @@ Navigation
 - The app loading from the real GitHub Pages URL, because of the repo name mismatch. The same build works under `/filament-tracker/` on a local server, and the Pages deploy itself succeeds.
 - Anything on a real phone: camera capture, the photo library, Add to Home Screen, and how the dial feels.
 - Safari and iOS behaviour in general. Browser checks ran in Chromium-based Edge only. Worth watching on iPhone: Export backup from the installed app, and safe-area spacing around the notch.
+- How flicking feels on a real iPhone. The momentum constants are in `src/domain/momentum.ts` if it needs tuning.
+- The photo fix on a real iPhone. WebKit on Windows reproduced the failure and confirmed the fix, but it isn't iOS Safari itself.
 - Haptics. The code calls `navigator.vibrate`, which Android Chrome supports and iOS doesn't. A unit test confirms the call is made, but not that it feels right.
 
 ## Added dependencies (beyond DESIGN.md)

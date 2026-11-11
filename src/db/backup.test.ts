@@ -30,7 +30,13 @@ const photoBytes = new Uint8Array([0xff, 0xd8, 0x00, 0x7f, 0x80, 0xff, 0xd9]);
 
 async function seed() {
   const a = await makeSpool({ brand: 'Acme', price: 19.5, spoolSizeGrams: 750, startGrams: 750 });
-  const b = await makeSpool({ material: 'PETG', colorName: undefined });
+  const b = await makeSpool({
+    material: 'PETG',
+    colorName: undefined,
+    colorHex: '#ff0000',
+    colorStops: ['#ff0000', '#ffd700', '#0000ff'],
+    shiny: true,
+  });
   await setSpoolArchived(b.id, true);
   await addPrint({
     name: 'With photo',
@@ -55,13 +61,11 @@ async function dumpTables() {
   return {
     spools: await db.spools.orderBy('id').toArray(),
     printFilaments: await db.printFilaments.orderBy('id').toArray(),
-    prints: await Promise.all(
-      prints.map(async ({ photo, ...print }) => ({
-        ...print,
-        photoBytes: photo ? Array.from(new Uint8Array(await photo.arrayBuffer())) : undefined,
-        photoType: photo?.type,
-      })),
-    ),
+    colors: await db.colors.orderBy('id').toArray(),
+    prints: prints.map(({ photoData, ...print }) => ({
+      ...print,
+      photoBytes: photoData ? Array.from(new Uint8Array(photoData)) : undefined,
+    })),
   };
 }
 
@@ -82,6 +86,11 @@ describe('backup round trip', () => {
     await importBackupText(text);
 
     expect(await dumpTables()).toEqual(before);
+    expect(before.colors).toHaveLength(2);
+    expect(before.spools.find((s) => s.id === b.id)).toMatchObject({
+      colorStops: ['#ff0000', '#ffd700', '#0000ff'],
+      shiny: true,
+    });
     expect(await getSpoolRemaining(a.id)).toBe(remainingA);
     expect(await getSpoolRemaining(b.id)).toBe(remainingB);
     expect(getLowStockThreshold()).toBe(150);
@@ -107,6 +116,26 @@ describe('backup round trip', () => {
     await importBackupText(text);
     const materials = (await db.spools.toArray()).map((spool) => spool.material);
     expect(materials).not.toContain('Replaced');
+  });
+});
+
+describe('older backups', () => {
+  it('imports a schema version 1 backup and rebuilds saved colors from its spools', async () => {
+    await seed();
+    const backup = JSON.parse(await exportBackupText()) as Record<string, unknown>;
+    backup.schemaVersion = 1;
+    delete backup.colors;
+    await eraseAllData();
+
+    await importBackupText(JSON.stringify(backup));
+
+    expect(await db.spools.count()).toBe(2);
+    const palettes = (await db.colors.toArray()).map((c) => [c.material, c.finish, c.colorHex, c.colorStops, c.shiny]);
+    const spools = (await db.spools.toArray()).map((s) => [s.material, s.finish, s.colorHex, s.colorStops, s.shiny]);
+    expect(palettes).toHaveLength(2);
+    expect(palettes).toEqual(expect.arrayContaining(spools));
+    const withPhoto = (await listPrintSummaries()).find((s) => s.print.name === 'With photo');
+    expect(new Uint8Array(await withPhoto!.print.photo!.arrayBuffer())).toEqual(photoBytes);
   });
 });
 
@@ -176,6 +205,7 @@ describe('eraseAllData', () => {
     expect(await db.spools.count()).toBe(0);
     expect(await db.prints.count()).toBe(0);
     expect(await db.printFilaments.count()).toBe(0);
+    expect(await db.colors.count()).toBe(0);
     expect(getLowStockThreshold()).toBe(100);
   });
 });

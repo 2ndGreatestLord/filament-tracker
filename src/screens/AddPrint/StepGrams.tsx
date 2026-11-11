@@ -35,11 +35,13 @@ function GramsContent({ slot, spool }: GramsContentProps) {
       <GramsDial
         value={grams}
         onChange={setGrams}
-        colorHex={spool.colorHex}
+        paint={spool}
         fraction={fractionRemaining(after, spoolCapacity(spool))}
         label="Grams dial"
       />
-      <p className="text-center text-sm text-muted">Spin around the spool: one turn is 100 g</p>
+      <p className="text-center text-sm text-muted">
+        Swipe around the spool to spin it, or flick it. One turn is 100 g.
+      </p>
       <GramsField value={grams} onChange={setGrams} label="Grams used" />
       <p className="text-center">
         {formatGrams(spool.remaining)} left → {formatGrams(after)} after this print.

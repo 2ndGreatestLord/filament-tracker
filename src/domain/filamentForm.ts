@@ -38,6 +38,9 @@ export interface FilamentFormValues {
   finish: string;
   finishOther: string;
   colorHex: string;
+  /** Extra gradient colors after `colorHex`. Empty for a single color. */
+  gradient: string[];
+  shiny: boolean;
   colorName: string;
   amountMode: 'new' | 'set';
   setGrams: string;
@@ -54,6 +57,8 @@ export interface FilamentFields {
   material: string;
   finish: string;
   colorHex: string;
+  colorStops?: string[];
+  shiny?: boolean;
   colorName?: string;
   startGrams: number;
   brand?: string;
@@ -67,6 +72,8 @@ export const EMPTY_FILAMENT_FORM: FilamentFormValues = {
   finish: '',
   finishOther: '',
   colorHex: '',
+  gradient: [],
+  shiny: false,
   colorName: '',
   amountMode: 'new',
   setGrams: '',
@@ -117,13 +124,23 @@ export function validateFilamentForm(values: FilamentFormValues): FilamentFormEr
   return errors;
 }
 
-/** Converts valid form values to spool fields. */
-export function filamentFormToFields(values: FilamentFormValues): FilamentFields {
-  const preset = COLORS.find((color) => color.hex === values.colorHex);
+/** The material and finish as they will be saved, or empty strings until chosen. */
+export function resolvedCombo(values: FilamentFormValues): { material: string; finish: string } {
   return {
     material: values.material === OTHER ? values.materialOther.trim() : values.material,
     finish: values.finish === OTHER ? values.finishOther.trim() : values.finish,
+  };
+}
+
+/** Converts valid form values to spool fields. */
+export function filamentFormToFields(values: FilamentFormValues): FilamentFields {
+  const gradient = values.gradient.length > 0;
+  const preset = gradient ? undefined : COLORS.find((color) => color.hex === values.colorHex);
+  return {
+    ...resolvedCombo(values),
     colorHex: values.colorHex,
+    colorStops: gradient ? [values.colorHex, ...values.gradient] : undefined,
+    shiny: values.shiny || undefined,
     colorName: values.colorName.trim() || preset?.name,
     startGrams:
       values.amountMode === 'new' ? newSpoolGrams(values.spoolSize) : Number(values.setGrams),
@@ -138,13 +155,17 @@ export function filamentFieldsToForm(fields: FilamentFields): FilamentFormValues
   const knownMaterial = (MATERIALS as readonly string[]).includes(fields.material);
   const knownFinish = (FINISHES as readonly string[]).includes(fields.finish);
   const spoolSize = fields.spoolSizeGrams?.toString() ?? '';
-  const preset = COLORS.find((color) => color.hex === fields.colorHex);
+  const gradient = fields.colorStops && fields.colorStops.length >= 2 ? fields.colorStops.slice(1) : [];
+  const preset =
+    gradient.length > 0 ? undefined : COLORS.find((color) => color.hex === fields.colorHex);
   return {
     material: knownMaterial ? fields.material : OTHER,
     materialOther: knownMaterial ? '' : fields.material,
     finish: knownFinish ? fields.finish : OTHER,
     finishOther: knownFinish ? '' : fields.finish,
     colorHex: fields.colorHex,
+    gradient,
+    shiny: fields.shiny ?? false,
     colorName: fields.colorName && fields.colorName !== preset?.name ? fields.colorName : '',
     amountMode: fields.startGrams === newSpoolGrams(spoolSize) ? 'new' : 'set',
     setGrams: String(fields.startGrams),

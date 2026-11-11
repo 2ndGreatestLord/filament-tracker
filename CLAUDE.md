@@ -35,7 +35,7 @@ No backend, analytics, accounts, or external API calls. The app must work fully 
 - Add Print uses one shared draft state in the flow's layout route, so Back never loses input. It is mirrored to `sessionStorage` (without the photo) so a page reload doesn't lose it either.
 - Vite `base` is `/filament-tracker/`, with `HashRouter` for routing.
 - Strict TypeScript. No `any` without a comment giving the reason.
-- Photos: compressed to at most 1280 px on the longest side, JPEG at about 0.8, stored as a `Blob`.
+- Photos: compressed to at most 1280 px on the longest side, JPEG at about 0.8, stored as raw bytes (`photoData` ArrayBuffer + `photoType`), never as a `Blob`, because Safari loses or rejects Blobs in IndexedDB. The repository rebuilds a `Blob` on read.
 - Dark theme by default, light follows the system. One accent colour. Colours are CSS variables in `src/index.css`.
 - Never skip, weaken, or delete a test to make it pass.
 - Keep dependencies to those in `DESIGN.md` plus small helpers noted in `PROGRESS.md`.

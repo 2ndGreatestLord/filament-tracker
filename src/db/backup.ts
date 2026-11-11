@@ -1,7 +1,10 @@
+import { palettesFromSpools } from '../domain/palette';
 import { base64ToBytes, bytesToBase64 } from '../domain/base64';
-import type { Print, PrintFilament, Spool } from '../domain/types';
+import { MAX_STOPS } from '../domain/paint';
+import type { Print, PrintFilament, SavedColor, Spool } from '../domain/types';
+import { migrateLegacyPhotos } from './migrations';
 import { clearAllTables } from './repository';
-import { db, SCHEMA_VERSION } from './schema';
+import { db, SCHEMA_VERSION, type StoredPrint } from './schema';
 import { getLowStockThreshold, resetSettings, setLowStockThreshold } from './settings';
 
 export interface BackupPrint extends Omit<Print, 'photo'> {
@@ -18,6 +21,8 @@ export interface Backup {
   spools: Spool[];
   prints: BackupPrint[];
   printFilaments: PrintFilament[];
+  /** Saved colors per material and finish. Added in schema version 2. */
+  colors: SavedColor[];
 }
 
 export class BackupError extends Error {
@@ -27,21 +32,23 @@ export class BackupError extends Error {
   }
 }
 
-export async function createBackup(): Promise<Backup> {
-  const [spools, prints, printFilaments] = await db.transaction(
-    'r',
-    db.spools,
-    db.prints,
-    db.printFilaments,
-    () => Promise.all([db.spools.toArray(), db.prints.toArray(), db.printFilaments.toArray()]),
-  );
+function toBackupPrint({ photoData, photoType, photo: _legacy, ...print }: StoredPrint): BackupPrint {
+  if (!photoData) return print;
+  return { ...print, photo: bytesToBase64(new Uint8Array(photoData)), photoType: photoType ?? 'image/jpeg' };
+}
 
-  const encoded = await Promise.all(
-    prints.map(async ({ photo, ...print }): Promise<BackupPrint> => {
-      if (!photo) return print;
-      const bytes = new Uint8Array(await photo.arrayBuffer());
-      return { ...print, photo: bytesToBase64(bytes), photoType: photo.type };
-    }),
+export async function createBackup(): Promise<Backup> {
+  await migrateLegacyPhotos();
+  const [spools, prints, printFilaments, colors] = await db.transaction(
+    'r',
+    [db.spools, db.prints, db.printFilaments, db.colors],
+    () =>
+      Promise.all([
+        db.spools.toArray(),
+        db.prints.toArray(),
+        db.printFilaments.toArray(),
+        db.colors.toArray(),
+      ]),
   );
 
   return {
@@ -50,8 +57,9 @@ export async function createBackup(): Promise<Backup> {
     exportedAt: new Date().toISOString(),
     settings: { lowStockThreshold: getLowStockThreshold() },
     spools,
-    prints: encoded,
+    prints: prints.map(toBackupPrint),
     printFilaments,
+    colors,
   };
 }
 
@@ -66,6 +74,16 @@ const isNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 const isOptional = (check: (value: unknown) => boolean) => (value: unknown) =>
   value === undefined || check(value);
+const isStops = (value: unknown) =>
+  Array.isArray(value) && value.length <= MAX_STOPS && value.every(isText);
+
+function hasValidPaint(value: Record<string, unknown>): boolean {
+  return (
+    isText(value.colorHex) &&
+    isOptional(isStops)(value.colorStops) &&
+    isOptional((shiny) => typeof shiny === 'boolean')(value.shiny)
+  );
+}
 
 function isSpool(value: unknown): value is Spool {
   return (
@@ -73,7 +91,7 @@ function isSpool(value: unknown): value is Spool {
     isText(value.id) &&
     isText(value.material) &&
     isText(value.finish) &&
-    isText(value.colorHex) &&
+    hasValidPaint(value) &&
     isOptional(isText)(value.colorName) &&
     isNumber(value.startGrams) &&
     isNumber(value.adjustmentGrams) &&
@@ -111,6 +129,18 @@ function isPrintFilament(value: unknown): value is PrintFilament {
   );
 }
 
+function isSavedColor(value: unknown): value is SavedColor {
+  return (
+    isRecord(value) &&
+    isText(value.id) &&
+    isText(value.material) &&
+    isText(value.finish) &&
+    isOptional(isText)(value.name) &&
+    hasValidPaint(value) &&
+    isText(value.createdAt)
+  );
+}
+
 /** Checks a backup file thoroughly, so a bad file can never replace good data. */
 export function parseBackup(text: string): Backup {
   let data: unknown;
@@ -130,6 +160,8 @@ export function parseBackup(text: string): Backup {
     throw new BackupError('That backup is from a newer version of the app. Update first.');
   }
 
+  // Version 1 backups have no saved colors; they're rebuilt from the spools below.
+  const colors = data.schemaVersion >= 2 ? data.colors : [];
   const { spools, prints, printFilaments, settings } = data;
   if (
     !Array.isArray(spools) ||
@@ -138,6 +170,8 @@ export function parseBackup(text: string): Backup {
     !prints.every(isBackupPrint) ||
     !Array.isArray(printFilaments) ||
     !printFilaments.every(isPrintFilament) ||
+    !Array.isArray(colors) ||
+    !colors.every(isSavedColor) ||
     !isRecord(settings) ||
     !isNumber(settings.lowStockThreshold) ||
     settings.lowStockThreshold < 0
@@ -151,13 +185,17 @@ export function parseBackup(text: string): Backup {
     throw new BackupError('That backup is damaged or incomplete.');
   }
 
-  return data as unknown as Backup;
+  const palette =
+    data.schemaVersion >= 2
+      ? (colors as SavedColor[])
+      : palettesFromSpools(spools, () => crypto.randomUUID(), new Date().toISOString());
+  return { ...(data as unknown as Backup), colors: palette };
 }
 
-function decodePrint({ photo, photoType, ...print }: BackupPrint): Print {
+function decodePrint({ photo, photoType, ...print }: BackupPrint): StoredPrint {
   if (photo === undefined) return print;
   try {
-    return { ...print, photo: new Blob([base64ToBytes(photo)], { type: photoType ?? 'image/jpeg' }) };
+    return { ...print, photoData: base64ToBytes(photo).buffer, photoType: photoType ?? 'image/jpeg' };
   } catch {
     throw new BackupError('That backup has a damaged photo.');
   }
@@ -168,11 +206,17 @@ export async function importBackupText(text: string): Promise<void> {
   const backup = parseBackup(text);
   const prints = backup.prints.map(decodePrint);
 
-  await db.transaction('rw', db.spools, db.prints, db.printFilaments, async () => {
-    await Promise.all([db.spools.clear(), db.prints.clear(), db.printFilaments.clear()]);
+  await db.transaction('rw', [db.spools, db.prints, db.printFilaments, db.colors], async () => {
+    await Promise.all([
+      db.spools.clear(),
+      db.prints.clear(),
+      db.printFilaments.clear(),
+      db.colors.clear(),
+    ]);
     await db.spools.bulkAdd(backup.spools);
     await db.prints.bulkAdd(prints);
     await db.printFilaments.bulkAdd(backup.printFilaments);
+    await db.colors.bulkAdd(backup.colors);
   });
   setLowStockThreshold(backup.settings.lowStockThreshold);
 }

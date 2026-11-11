@@ -3,8 +3,17 @@ import {
   getPrintSummary,
   getSpoolDetail,
   listPrintSummaries,
+  listSavedColors,
   listSpoolsWithRemaining,
 } from './repository';
+
+/** Saved colors for a material and finish. Empty until both are chosen. */
+export function useSavedColors(material: string, finish: string) {
+  return useLiveQuery(
+    () => (material && finish ? listSavedColors(material, finish) : Promise.resolve([])),
+    [material, finish],
+  );
+}
 
 /** Live hooks return `undefined` while loading, and `null` when a record doesn't exist. */
 export function useSpools() {
