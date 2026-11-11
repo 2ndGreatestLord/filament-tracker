@@ -8,6 +8,18 @@
 - The repo was renamed to `filament-tracker`, which fixed the blank page caused by the case mismatch with Vite's `base`.
 - Still to check on a real phone: camera and photo library, Add to Home Screen, how flicking the spool feels, and photos surviving on iPhone (see "Could not verify").
 
+## Feedback round 2
+
+1. **No more basic colors.** The 16 preset swatches are gone. Colors are either new (custom picker, gradient, shine) or saved for that material and finish. Existing spools keep their colors and names, including ones that were named after a preset, like "Red".
+2. **Eyedropper from a photo.** "Pick from photo" takes a photo of the roll (or "or use a saved photo" picks one from the library), then tap or drag on the filament to pick its color. It can also add the color as a gradient stop. Decisions:
+   - The photo is shrunk to 480 px on its longest side before sampling. That's plenty for a color and keeps it fast on a phone.
+   - The color is the median of each channel over a 13×13 px square, not one pixel and not an average, so highlights and dark gaps are ignored. In a test photo with white stripes over a teal roll, it read teal.
+   - The photo is not stored. Nothing about it is kept once the sheet closes.
+   - The eyedropper is built on a photo rather than a live camera view, because a live view needs camera permission and works poorly in an installed iPhone web app. A photo works the same everywhere.
+3. **Two sheet fixes found along the way.** The eyedropper can open on top of the Add Filament sheet inside Add Print. Escape used to close both sheets, and closing them together could leave the page unable to scroll. Both are fixed and tested.
+
+Checked in headless Edge and Playwright WebKit with a real 3000×2000 photo: taps on two rolls and the background read within a few units of their true colors, dragging moves the circle, "Use this color" and "Add as gradient color" fill the form, and the spool saves, with no console errors.
+
 ## Morning review (spec vs. build)
 
 DESIGN.md was compared line by line with the code. Gaps and differences, smallest first, with what was done:
@@ -101,6 +113,7 @@ Checked in real browsers: headless Edge and Playwright WebKit both passed 14 che
 
 - Anything on a real phone: camera capture, the photo library, Add to Home Screen, and how the dial feels.
 - Safari on a real iPhone. Browser checks ran in Edge and in Playwright's WebKit on Windows, which is close to Safari but not the same. Worth watching on iPhone: Export backup from the installed app, and safe-area spacing around the notch.
+- The eyedropper on a real phone, with real lighting. Colors in photos depend on the light, so a photo in warm indoor light will read warmer than the filament looks in daylight.
 - How flicking feels on a real iPhone. The momentum constants are in `src/domain/momentum.ts` if it needs tuning.
 - The photo fix on a real iPhone. WebKit on Windows reproduced the failure and confirmed the fix, but it isn't iOS Safari itself.
 - Haptics. The code calls `navigator.vibrate`, which Android Chrome supports and iOS doesn't. A unit test confirms the call is made, but not that it feels right.

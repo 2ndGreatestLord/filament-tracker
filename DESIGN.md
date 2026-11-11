@@ -44,10 +44,10 @@ The app has two main screens, **Filament** and **Prints**, switched with a botto
 - A **+ Add Filament** button opens a form with four selectors in the sketch's order:
   1. **Material:** PLA, PETG, ABS, ASA, TPU, Nylon, Other (Other shows a text box).
   2. **Finish:** Basic, Matte, Silk, Multicolor, Wood, Glow, Carbon Fiber, Other.
-  3. **Color**, in three parts:
+  3. **Color**, in two parts. There are no preset colors; every color is his own, either new or saved:
      - **Your colors for this material and finish.** Every material and finish combination keeps its own saved colors, so PLA · Basic, PLA · Matte, and PETG · Basic each have their own list. A color is saved there automatically the first time a spool is saved with it, and the app keeps all of them. One tap reuses a saved color, including its gradient, shine, and name. An Edit button removes saved colors, with Undo. Until a material and finish are chosen, this part says to choose them first.
-     - **Basic colors:** a row of about 16 tappable color dots.
-     - **Custom, gradient, or shiny:** a custom color picker, "+ Gradient color" to add up to 3 more colors (4 in total) that blend across the spool, each removable, and a **Shiny** toggle that adds a sheen. Shine works on a single color or a gradient. A small spool preview shows the result, next to an optional color name such as "Jade White."
+     - **New color:** a custom color picker, "+ Gradient color" to add up to 3 more colors (4 in total) that blend across the spool, each removable, and a **Shiny** toggle that adds a sheen. Shine works on a single color or a gradient. A small spool preview shows the result, next to an optional color name such as "Jade White." A color is only named if he types a name.
+     - **Pick from photo (eyedropper):** "Pick from photo" opens the camera, and "or use a saved photo" opens the photo library. The photo opens in a sheet. Tapping or dragging on it moves a circle, and the color under the circle is shown live with its hex code. The color is the median of a small area around the circle, not a single pixel, so glints, shadows, and gaps between strands don't throw it off. Arrow keys also move the circle. **Use this color** sets the color. **Add as gradient color** (once there's a color, and while there's room for another stop) adds it to the gradient, so a multicolor roll can be sampled one color at a time. The photo is only used to pick the color and is never saved.
   4. **Amount:** "New (1,000 g)" is selected by default. "Set…" shows a grams input for a partly used spool.
 - An optional "More details" section, collapsed by default, holds brand, price paid, and a full spool size other than 1,000 g.
 - Save adds the spool to the grid with a brief confirmation.
@@ -129,7 +129,7 @@ The stack below is chosen so Claude Code can build, test, and deploy it without 
 Architecture rules for Claude Code:
 
 - `src/db/`: the Dexie schema plus **all** data access through a small repository layer, such as `addPrint()` and `getSpoolRemaining()`. Components never call Dexie directly.
-- `src/domain/`: pure functions for remaining grams, low-stock state, dial angle-to-grams math, spin momentum, the reel's geometry, and colors (gradients, shine, saved palettes). These are the most heavily unit-tested code.
+- `src/domain/`: pure functions for remaining grams, low-stock state, dial angle-to-grams math, spin momentum, the reel's geometry, colors (gradients, shine, saved palettes), and sampling a color from a photo. These are the most heavily unit-tested code.
 - `src/screens/` and `src/components/`: one folder per screen. Add Print uses one shared draft state, so Back doesn't lose input.
 - Saving a print writes the print and its filament rows in **one Dexie transaction**.
 - Vite `base` must be `/filament-tracker/` so assets load on GitHub Pages.
@@ -144,7 +144,7 @@ The app should feel like a clean, modern phone app, built around a dark theme. T
 - **Grams spool:** the spool itself rotates with the grams (one turn = 100 g) as it's dragged or coasting after a flick, tracks multiple full turns, never goes below 0, and has no handle or dial ring.
 - **Feedback:** short confirmation toasts, and Undo for 5 seconds after any delete.
 - **Empty states:** a friendly prompt such as "No filament yet, add your first spool" with the + button.
-- **Accessibility:** color is never the only signal (tiles also say "Low" in words), every color dot has a label, and the dial has a matching text input.
+- **Accessibility:** color is never the only signal (tiles also say "Low" in words), every color dot has a label, the dial has a matching text input, and the photo eyedropper works with arrow keys and announces the picked color.
 - **App icon:** a simple spool icon generated as SVG and exported to the PNG sizes the PWA needs.
 
 ## Milestones

@@ -83,10 +83,10 @@ describe('filamentFormToFields', () => {
     ).toBe('PC');
   });
 
-  it('names preset colors unless a name was typed', () => {
-    expect(filamentFormToFields(valid).colorName).toBe('Red');
-    expect(filamentFormToFields({ ...valid, colorName: 'Jade' }).colorName).toBe('Jade');
-    expect(filamentFormToFields({ ...valid, colorHex: '#123456' }).colorName).toBeUndefined();
+  it('saves only a typed color name, trimmed', () => {
+    expect(filamentFormToFields(valid).colorName).toBeUndefined();
+    expect(filamentFormToFields({ ...valid, colorName: ' Jade ' }).colorName).toBe('Jade');
+    expect(filamentFormToFields({ ...valid, colorName: '   ' }).colorName).toBeUndefined();
   });
 });
 
@@ -106,8 +106,11 @@ describe('gradients and shiny colors', () => {
     expect(filamentFormToFields(valid).shiny).toBeUndefined();
   });
 
-  it('doesn’t name a gradient after its first preset color', () => {
-    expect(filamentFormToFields({ ...valid, gradient: ['#0000ff'] }).colorName).toBeUndefined();
+  it('keeps an existing spool’s color name when editing', () => {
+    expect(
+      filamentFieldsToForm({ material: 'PLA', finish: 'Basic', colorHex: '#d32f2f', colorName: 'Red', startGrams: 1000 })
+        .colorName,
+    ).toBe('Red');
   });
 
   it('round-trips a shiny gradient', () => {

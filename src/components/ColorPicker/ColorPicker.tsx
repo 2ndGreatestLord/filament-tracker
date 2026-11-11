@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { useSavedColors } from '../../db/hooks';
 import { deleteSavedColor, restoreSavedColor } from '../../db/repository';
-import { COLORS, type FilamentFormValues } from '../../domain/filamentForm';
+import type { FilamentFormValues } from '../../domain/filamentForm';
 import {
   MAX_STOPS,
   paintBackground,
@@ -12,6 +12,7 @@ import {
 } from '../../domain/paint';
 import type { SavedColor } from '../../domain/types';
 import { CloseIcon, PlusIcon } from '../Icons/Icons';
+import { PhotoEyedropper } from '../PhotoEyedropper/PhotoEyedropper';
 import { SpoolGraphic } from '../SpoolGraphic/SpoolGraphic';
 import { useToast } from '../Toast/Toast';
 
@@ -49,8 +50,9 @@ export function toPaint(value: ColorValues): Paint {
 }
 
 /**
- * Picks a filament color. Each material and finish keeps its own saved colors, then come
- * the basic colors, then a custom color that can be a gradient and can be shiny.
+ * Picks a filament color: one of the colors saved for this material and finish, or a new
+ * custom color, chosen with the color picker or picked from a photo of the roll. A custom
+ * color can be a gradient and can be shiny.
  */
 export function ColorPicker({ value, onChange, material, finish, inputClass }: ColorPickerProps) {
   const id = useId();
@@ -143,30 +145,8 @@ export function ColorPicker({ value, onChange, material, finish, inputClass }: C
         </p>
       )}
 
-      <div>
-        <h3 className="mb-2 text-sm font-semibold">Basic colors</h3>
-        <div role="radiogroup" aria-label="Basic colors" className="flex flex-wrap gap-2">
-          {COLORS.map((color) => {
-            const checked = !savedMatch && value.gradient.length === 0 && value.colorHex === color.hex;
-            return (
-              <label key={color.hex} title={color.name} className={SWATCH} style={{ backgroundColor: color.hex }}>
-                <input
-                  type="radio"
-                  name={`${id}-basic`}
-                  aria-label={color.name}
-                  checked={checked}
-                  onChange={() => onChange({ colorHex: color.hex, gradient: [], colorName: '' })}
-                  className="sr-only"
-                />
-                {checked && <Check />}
-              </label>
-            );
-          })}
-        </div>
-      </div>
-
       <div className="flex flex-col gap-3">
-        <h3 className="text-sm font-semibold">Custom, gradient, or shiny</h3>
+        <h3 className="text-sm font-semibold">{saved.length > 0 ? 'Or a new color' : 'New color'}</h3>
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="color"
@@ -223,6 +203,13 @@ export function ColorPicker({ value, onChange, material, finish, inputClass }: C
             ✨ Shiny
           </label>
         </div>
+
+        <PhotoEyedropper
+          canAddToGradient={Boolean(value.colorHex) && stopCount < MAX_STOPS}
+          onPick={(hex, asGradient) =>
+            onChange(asGradient ? { gradient: [...value.gradient, hex] } : { colorHex: hex })
+          }
+        />
 
         <div className="flex items-center gap-3">
           {value.colorHex && (

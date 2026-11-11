@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { clearAllTables, listSpoolsWithRemaining } from '../../db/repository';
@@ -15,7 +15,7 @@ async function addSpoolThroughForm(user: UserEvent, material: string, finish: st
   await screen.findByRole('heading', { name: 'Add Filament' });
   await user.click(screen.getByRole('radio', { name: material }));
   await user.click(screen.getByRole('radio', { name: finish }));
-  await user.click(within(screen.getByRole('radiogroup', { name: 'Basic colors' })).getByRole('radio', { name: color }));
+  fireEvent.input(screen.getByLabelText('Custom color'), { target: { value: color } });
   await user.click(screen.getByRole('button', { name: 'Save' }));
   await screen.findByText(`${material} · ${finish}`);
 }
@@ -28,8 +28,8 @@ async function tileGrams(description: string) {
 describe('a print from start to finish', () => {
   it('adds 2 spools, logs a 2-filament print, edits it, deletes it, and gives the grams back', async () => {
     const { user } = renderApp('/filament');
-    await addSpoolThroughForm(user, 'PLA', 'Matte', 'Red');
-    await addSpoolThroughForm(user, 'PETG', 'Basic', 'Blue');
+    await addSpoolThroughForm(user, 'PLA', 'Matte', '#d32f2f');
+    await addSpoolThroughForm(user, 'PETG', 'Basic', '#1e5fd0');
     expect(await tileGrams('PLA · Matte')).toContain('1,000 g');
     expect(await tileGrams('PETG · Basic')).toContain('1,000 g');
 

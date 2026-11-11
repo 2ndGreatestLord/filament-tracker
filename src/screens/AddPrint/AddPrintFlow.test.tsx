@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -158,7 +158,7 @@ describe('Add Print', () => {
     const form = await screen.findByRole('dialog', { name: 'Add Filament' });
     await user.click(within(form).getByRole('radio', { name: 'ASA' }));
     await user.click(within(form).getByRole('radio', { name: 'Glow' }));
-    await user.click(within(form).getByRole('radio', { name: 'Lime' }));
+    fireEvent.input(within(form).getByLabelText('Custom color'), { target: { value: '#9ccc33' } });
     await user.click(within(form).getByRole('button', { name: 'Save and use' }));
 
     expect(await screen.findByRole('button', { name: 'Slot 1: ASA · Glow' })).toBeInTheDocument();

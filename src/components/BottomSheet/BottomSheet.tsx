@@ -3,6 +3,22 @@ import { CloseIcon } from '../Icons/Icons';
 
 const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled), [tabindex="0"]';
 
+// Sheets can stack, and can close in any order or all at once, so page scrolling is locked
+// while any sheet is open and restored only when the last one closes.
+let openSheets = 0;
+let overflowBeforeSheets = '';
+
+function lockScroll() {
+  if (openSheets++ === 0) {
+    overflowBeforeSheets = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function unlockScroll() {
+  if (--openSheets === 0) document.body.style.overflow = overflowBeforeSheets;
+}
+
 interface BottomSheetProps {
   title: string;
   onClose: () => void;
@@ -14,16 +30,18 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockScroll();
     panel.current?.focus();
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlockScroll();
       previous?.focus?.();
     };
   }, []);
 
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    // A sheet can open on top of another (the photo color picker inside Add Filament in the
+    // Add Print flow). Keys belong to the top sheet only, so Escape closes just that one.
+    event.stopPropagation();
     if (event.key === 'Escape') {
       onClose();
       return;

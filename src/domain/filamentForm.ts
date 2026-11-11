@@ -13,25 +13,6 @@ export const FINISHES = [
   OTHER,
 ] as const;
 
-export const COLORS = [
-  { name: 'White', hex: '#f5f5f5' },
-  { name: 'Black', hex: '#1c1c1e' },
-  { name: 'Gray', hex: '#8e8e93' },
-  { name: 'Silver', hex: '#c7c9cc' },
-  { name: 'Red', hex: '#d32f2f' },
-  { name: 'Orange', hex: '#f57c00' },
-  { name: 'Yellow', hex: '#fdd835' },
-  { name: 'Lime', hex: '#9ccc33' },
-  { name: 'Green', hex: '#2e8b3d' },
-  { name: 'Teal', hex: '#00897b' },
-  { name: 'Light Blue', hex: '#4fc3f7' },
-  { name: 'Blue', hex: '#1e5fd0' },
-  { name: 'Purple', hex: '#7b3fb5' },
-  { name: 'Pink', hex: '#f06fa8' },
-  { name: 'Brown', hex: '#795032' },
-  { name: 'Beige', hex: '#d9c3a0' },
-] as const;
-
 export interface FilamentFormValues {
   material: string;
   materialOther: string;
@@ -135,13 +116,12 @@ export function resolvedCombo(values: FilamentFormValues): { material: string; f
 /** Converts valid form values to spool fields. */
 export function filamentFormToFields(values: FilamentFormValues): FilamentFields {
   const gradient = values.gradient.length > 0;
-  const preset = gradient ? undefined : COLORS.find((color) => color.hex === values.colorHex);
   return {
     ...resolvedCombo(values),
     colorHex: values.colorHex,
     colorStops: gradient ? [values.colorHex, ...values.gradient] : undefined,
     shiny: values.shiny || undefined,
-    colorName: values.colorName.trim() || preset?.name,
+    colorName: values.colorName.trim() || undefined,
     startGrams:
       values.amountMode === 'new' ? newSpoolGrams(values.spoolSize) : Number(values.setGrams),
     brand: values.brand.trim() || undefined,
@@ -156,8 +136,6 @@ export function filamentFieldsToForm(fields: FilamentFields): FilamentFormValues
   const knownFinish = (FINISHES as readonly string[]).includes(fields.finish);
   const spoolSize = fields.spoolSizeGrams?.toString() ?? '';
   const gradient = fields.colorStops && fields.colorStops.length >= 2 ? fields.colorStops.slice(1) : [];
-  const preset =
-    gradient.length > 0 ? undefined : COLORS.find((color) => color.hex === fields.colorHex);
   return {
     material: knownMaterial ? fields.material : OTHER,
     materialOther: knownMaterial ? '' : fields.material,
@@ -166,7 +144,7 @@ export function filamentFieldsToForm(fields: FilamentFields): FilamentFormValues
     colorHex: fields.colorHex,
     gradient,
     shiny: fields.shiny ?? false,
-    colorName: fields.colorName && fields.colorName !== preset?.name ? fields.colorName : '',
+    colorName: fields.colorName ?? '',
     amountMode: fields.startGrams === newSpoolGrams(spoolSize) ? 'new' : 'set',
     setGrams: String(fields.startGrams),
     brand: fields.brand ?? '',

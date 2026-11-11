@@ -14,7 +14,8 @@ describe('Add Filament', () => {
 
     await user.click(await screen.findByRole('radio', { name: 'PETG' }));
     await user.click(screen.getByRole('radio', { name: 'Silk' }));
-    await user.click(screen.getByRole('radio', { name: 'Teal' }));
+    fireEvent.input(screen.getByLabelText('Custom color'), { target: { value: '#00897b' } });
+    await user.type(screen.getByLabelText('Color name (optional)'), 'Teal');
     expect(screen.getByRole('radio', { name: 'New (1,000 g)' })).toBeChecked();
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -39,7 +40,7 @@ describe('Add Filament', () => {
     await user.click(material.getByRole('radio', { name: 'Other' }));
     await user.type(await screen.findByLabelText('Material name'), 'PC');
     await user.click(screen.getByRole('radio', { name: 'Basic' }));
-    await user.click(screen.getByRole('radio', { name: 'Red' }));
+    fireEvent.input(screen.getByLabelText('Custom color'), { target: { value: '#d32f2f' } });
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('PC · Basic')).toBeInTheDocument();
   });
@@ -48,7 +49,7 @@ describe('Add Filament', () => {
     const { user } = renderApp('/filament/new');
     await user.click(await screen.findByRole('radio', { name: 'PLA' }));
     await user.click(screen.getByRole('radio', { name: 'Matte' }));
-    await user.click(screen.getByRole('radio', { name: 'Black' }));
+    fireEvent.input(screen.getByLabelText('Custom color'), { target: { value: '#1c1c1e' } });
     await user.click(screen.getByRole('radio', { name: 'Set…' }));
     await user.type(await screen.findByLabelText('Grams on spool'), '412');
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -59,7 +60,7 @@ describe('Add Filament', () => {
     const { user } = renderApp('/filament/new');
     await user.click(await screen.findByRole('radio', { name: 'PLA' }));
     await user.click(screen.getByRole('radio', { name: 'Matte' }));
-    await user.click(screen.getByRole('radio', { name: 'Blue' }));
+    fireEvent.input(screen.getByLabelText('Custom color'), { target: { value: '#1e5fd0' } });
     expect(screen.queryByLabelText('Brand')).toBeNull();
     await user.click(screen.getByRole('button', { name: /More details/ }));
     await user.type(screen.getByLabelText('Brand'), 'Acme');

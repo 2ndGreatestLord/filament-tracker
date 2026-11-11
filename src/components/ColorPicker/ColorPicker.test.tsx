@@ -100,7 +100,7 @@ describe('gradients and shine', () => {
     const { user } = renderApp('/filament/new');
     await user.click(await screen.findByRole('radio', { name: 'PLA' }));
     await user.click(pick('Silk'));
-    await user.click(pick('Red'));
+    fireEvent.input(screen.getByLabelText('Custom color'), { target: { value: '#d32f2f' } });
 
     const add = screen.getByRole('button', { name: 'Add gradient color' });
     await user.click(add);
@@ -130,7 +130,8 @@ describe('gradients and shine', () => {
     const { user } = renderApp('/filament/new');
     await user.click(await screen.findByRole('radio', { name: 'PLA' }));
     await user.click(pick('Silk'));
-    await user.click(pick('Silver'));
+    fireEvent.input(screen.getByLabelText('Custom color'), { target: { value: '#c7c9cc' } });
+    await user.type(screen.getByLabelText('Color name (optional)'), 'Silver');
     await user.click(screen.getByRole('checkbox', { name: /Shiny/ }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await screen.findByText('PLA · Silk');

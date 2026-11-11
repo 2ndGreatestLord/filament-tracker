@@ -18,7 +18,8 @@ function loadWithElement(file: Blob): Promise<HTMLImageElement> {
   });
 }
 
-async function loadImage(file: Blob): Promise<LoadedImage> {
+/** Decodes a photo, upright according to its EXIF orientation. */
+export async function loadImage(file: Blob): Promise<LoadedImage> {
   try {
     return await createImageBitmap(file, { imageOrientation: 'from-image' });
   } catch {
